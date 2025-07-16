@@ -29,7 +29,6 @@ export default function BuyersPage() {
     showLoading();
     try {
       const res = await apiClient.getBuyers(token);
-      console.log("yok fetch ", res.data)
       setBuyers(res.data);
     } catch (err) {
       console.error("โหลด buyers ล้มเหลว", err);
