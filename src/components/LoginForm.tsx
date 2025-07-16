@@ -28,7 +28,7 @@ export default function LoginPage() {
       const res = await apiClient.login(email, password);
       localStorage.setItem("token", res.token);
       router.replace("/Home");
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || "เข้าสู่ระบบล้มเหลว");
     } finally {
       hideLoading();

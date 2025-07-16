@@ -29,7 +29,7 @@ export default function BuyersPage() {
     showLoading();
     try {
       const res = await apiClient.getBuyers(token);
-      setBuyers(res.data);
+      setBuyers(res);
     } catch (err) {
       console.error("โหลด buyers ล้มเหลว", err);
     } finally {
