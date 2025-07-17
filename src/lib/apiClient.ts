@@ -29,6 +29,10 @@ interface Buyers {
   name: string;
   phone: string;
 }
+export interface BlacklistNumber {
+  _id: string;
+  number: string;
+}
 
 export const apiClient = {
   login: (email: string, password: string) =>
@@ -51,4 +55,16 @@ export const apiClient = {
   // ✅ ลบ buyer
   deleteBuyer: (id: number, token: string) =>
     apiRequest(`/api/buyers/${id}`, "DELETE", undefined, token),
+
+  getBlacklist: (token: string) =>
+    apiRequest<{ data: BlacklistNumber[] }>("/api/blocknumber", "GET", undefined, token),
+
+  addBlacklist: (body: { number: string }, token: string) =>
+    apiRequest<{ data: BlacklistNumber }>("/api/blocknumber", "POST", body, token),
+
+  updateBlacklist: (id: string, body: { number: string }, token: string) =>
+    apiRequest<{ data: BlacklistNumber }>(`/api/blocknumber/${id}`, "PUT", body, token),
+
+  deleteBlacklist: (id: string, token: string) =>
+    apiRequest(`/api/blocknumber/${id}`, "DELETE", undefined, token),
 };
