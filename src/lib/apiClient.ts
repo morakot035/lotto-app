@@ -25,7 +25,7 @@ async function apiRequest<T = unknown>(
 }
 
 interface Buyers {
-  id: number;
+  _id: number;
   name: string;
   phone: string;
 }
@@ -42,11 +42,11 @@ export const apiClient = {
 
    // ✅ ดึงรายชื่อ buyers
   getBuyers: (token: string) =>
-    apiRequest<Buyers[]>("/api/buyers", "GET", undefined, token),
+    apiRequest<{ data: Buyers[] }>("/api/buyers", "GET", undefined, token),
 
   // ✅ เพิ่ม buyer
   addBuyer: (buyer: { name: string; phone: string }, token: string) =>
-    apiRequest<Buyers>("/api/buyers", "POST", buyer, token),
+    apiRequest<{ data: Buyers }>("/api/buyers", "POST", buyer, token),
 
   // ✅ ลบ buyer
   deleteBuyer: (id: number, token: string) =>

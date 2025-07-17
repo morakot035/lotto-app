@@ -9,7 +9,7 @@ import { getToken } from "@/lib/auth";
 import { useLoading } from "@/context/LoadingContext";
 
 interface Buyers {
-  id: number;
+  _id: number;
   name: string;
   phone: string;
 }
@@ -29,7 +29,7 @@ export default function BuyersPage() {
     showLoading();
     try {
       const res = await apiClient.getBuyers(token);
-      setBuyers(res);
+      setBuyers(res.data);
     } catch (err) {
       console.error("โหลด buyers ล้มเหลว", err);
     } finally {
@@ -51,16 +51,8 @@ export default function BuyersPage() {
     showLoading();
 
     const response = await apiClient.addBuyer({ name, phone }, token);
-    const newBuyer = response.data; // ✅ ดึงออกมาเฉพาะ data
-
-    // ตรวจสอบว่า buyers เป็น array
-    setBuyers((prev) => {
-      if (Array.isArray(prev)) {
-        return [...prev, newBuyer];
-      } else {
-        return [newBuyer]; // fallback ถ้า prev ไม่ใช่ array
-      }
-    });
+    const newBuyer = response.data;
+    setBuyers((prev) => [...prev, newBuyer]);
 
     setName("");
     setPhone("");
