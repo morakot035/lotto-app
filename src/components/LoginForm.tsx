@@ -29,7 +29,11 @@ export default function LoginPage() {
       localStorage.setItem("token", res.token);
       router.replace("/Home");
     } catch (err) {
-      setError(err.message || "เข้าสู่ระบบล้มเหลว");
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("เข้าสู่ระบบล้มเหลว");
+      }
     } finally {
       hideLoading();
     }
