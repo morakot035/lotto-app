@@ -129,7 +129,7 @@ export default function EntryPage() {
       setEntries((prev) => [
         ...prev,
         {
-          ...response.data,
+          data: response.data,
           createdAtThai: response.createdAtThai,
         },
       ]);
