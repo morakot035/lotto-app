@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus, FileEdit, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { getToken } from "@/lib/auth";
 import { apiClient } from "@/lib/apiClient";
 import { useLoading } from "@/context/LoadingContext";
 import AlertPopup from "@/components/AlertPopup";
+import { Autocomplete, TextField } from "@mui/material";
 
 interface Buyers {
   _id: number;
@@ -14,18 +15,23 @@ interface Buyers {
   phone: string;
 }
 
-interface Entry {
+interface LotteryEntry {
   buyerName: string;
   number: string;
-  top: string;
-  tod: string;
-  bottom2: string;
+  top?: string;
+  tod?: string;
+  bottom2?: string;
+}
+
+interface SaveLotteryResponse {
+  data: LotteryEntry & { _id: string; createdAt: string };
+  createdAtThai: string;
 }
 
 export default function EntryPage() {
   const [buyers, setBuyers] = useState<Buyers[]>([]);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [entry, setEntry] = useState<Entry>({
+  const [entries, setEntries] = useState<SaveLotteryResponse[]>([]);
+  const [entry, setEntry] = useState<LotteryEntry>({
     buyerName: "",
     number: "",
     top: "",
@@ -89,21 +95,57 @@ export default function EntryPage() {
     }
   };
 
-  const handleSave = () => {
-    if (!entry.buyerName || !entry.number) return;
-    setEntries((prev) => [...prev, entry]);
-    setEntry({
-      buyerName: entry.buyerName,
-      number: "",
-      top: "",
-      tod: "",
-      bottom2: "",
-    });
+  const handleSave = async () => {
+    const numberLength = entry.number.trim().length;
+
+    if (!entry.buyerName || (numberLength !== 2 && numberLength !== 3)) {
+      setAlertMessage("กรุณากรอกเลขให้ถูกต้อง 2 หรือ 3 หลัก");
+      return;
+    }
+
+    // กรณีเลข 3 หลัก
+    if (numberLength === 3) {
+      if (entry.bottom2) {
+        setAlertMessage("เลข 3 ตัวห้ามกรอกช่อง 2 ตัวล่าง");
+        return;
+      }
+    }
+
+    // กรณีเลข 2 หลัก
+    if (numberLength === 2) {
+      if (entry.tod) {
+        setAlertMessage("เลข 2 ตัวห้ามกรอกช่อง โต๊ด");
+        return;
+      }
+    }
+
+    try {
+      showLoading();
+      const token = getToken();
+      if (!token) return;
+
+      const response = await apiClient.saveLottery(entry, token);
+
+      setEntries((prev) => [
+        ...prev,
+        {
+          ...response.data,
+          createdAtThai: response.createdAtThai,
+        },
+      ]);
+
+      setEntry({ buyerName: "", number: "", top: "", tod: "", bottom2: "" });
+    } catch (err) {
+      hideLoading();
+      console.error("บันทึกหวยล้มเหลว", err);
+    } finally {
+      hideLoading();
+    }
   };
 
   return (
     <>
-      <section className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-indigo-900 via-sky-800/70 to-emerald-700 px-4 py-10 text-white">
+      <section className="min-h-screen bg-gradient-to-br from-sky-100 to-blue-200 px-4 py-10 text-gray-800 flex flex-col items-center">
         <Link
           href="/Home"
           className="absolute left-6 top-6 rounded-lg bg-white/10 px-3 py-1 text-sm backdrop-blur-md transition hover:bg-white/20"
@@ -111,110 +153,152 @@ export default function EntryPage() {
           ← กลับหน้าเมนู
         </Link>
 
-        <div className="w-full max-w-4xl rounded-3xl bg-white/10 p-8 backdrop-blur-md shadow-xl ring-1 ring-white/15">
-          <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold tracking-wide">
-            <FileEdit className="h-7 w-7" /> คีย์ข้อมูลหวย
-          </h1>
+        <h1 className="mb-10 text-2xl font-bold text-blue-800">
+          คีย์ข้อมูลหวย
+        </h1>
 
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-5">
-            <select
-              value={entry.buyerName}
-              onChange={(e) =>
-                setEntry({ ...entry, buyerName: e.target.value })
-              }
-              className="rounded-xl bg-white/20 px-3 py-2 text-white outline-none backdrop-blur-sm"
-            >
-              <option value="">เลือกชื่อ</option>
-              {buyers.map((b) => (
-                <option key={b._id} value={b.name} className="text-black">
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <input
-              ref={numberRef}
-              value={entry.number}
-              onChange={handleNumberChange}
-              onKeyDown={(e) => handleInputKeyDown(e, topRef)}
-              placeholder="เลข"
-              className="rounded-xl bg-white/20 px-3 py-2 text-white placeholder-slate-300 outline-none"
-            />
-            <input
-              ref={topRef}
-              value={entry.top}
-              onChange={(e) => setEntry({ ...entry, top: e.target.value })}
-              onKeyDown={(e) => handleInputKeyDown(e, todRef)}
-              placeholder="บน"
-              className="rounded-xl bg-white/20 px-3 py-2 text-white placeholder-slate-300 outline-none"
-            />
-            <input
-              ref={todRef}
-              value={entry.tod}
-              onChange={(e) => setEntry({ ...entry, tod: e.target.value })}
-              onKeyDown={(e) => handleInputKeyDown(e, bottomRef)}
-              placeholder="โต๊ด"
-              className="rounded-xl bg-white/20 px-3 py-2 text-white placeholder-slate-300 outline-none"
-            />
-            <input
-              ref={bottomRef}
-              value={entry.bottom2}
-              onChange={(e) => setEntry({ ...entry, bottom2: e.target.value })}
-              onKeyDown={(e) => handleInputKeyDown(e, saveButtonRef)}
-              placeholder="2 ตัวล่าง"
-              className="rounded-xl bg-white/20 px-3 py-2 text-white placeholder-slate-300 outline-none"
-            />
+        <div className="flex w-full max-w-6xl gap-6 flex-col lg:flex-row">
+          {/* ฝั่งซ้าย: ฟอร์มกรอกข้อมูล */}
+          <div className="flex-1 rounded-2xl bg-white/60 p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/40">
+            <div className="space-y-4">
+              {/* Autocomplete เลือกชื่อ */}
+              <div>
+                <label className="block mb-1 text-sm font-medium">ชื่อ</label>
+                <Autocomplete
+                  options={buyers}
+                  getOptionLabel={(option) => option.name}
+                  value={buyers.find((b) => b.name === entry.buyerName) || null}
+                  onChange={(event, newValue) => {
+                    setEntry({ ...entry, buyerName: newValue?.name || "" });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="เลือกชื่อ"
+                      variant="outlined"
+                      sx={{
+                        "& .MuiInputBase-root": {
+                          backgroundColor: "rgba(255,255,255,0.7)",
+                          borderRadius: "10px",
+                        },
+                        "& input": { color: "#1e293b" },
+                      }}
+                    />
+                  )}
+                />
+              </div>
+
+              {/* ช่องกรอกข้อมูลแนวตั้ง */}
+              <div>
+                <label className="block mb-1 text-sm font-medium">เลข</label>
+                <input
+                  ref={numberRef}
+                  value={entry.number}
+                  onChange={handleNumberChange}
+                  onKeyDown={(e) => handleInputKeyDown(e, topRef)}
+                  placeholder="เลข"
+                  className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-sm font-medium">บน</label>
+                <input
+                  ref={topRef}
+                  value={entry.top}
+                  onChange={(e) => setEntry({ ...entry, top: e.target.value })}
+                  onKeyDown={(e) => handleInputKeyDown(e, todRef)}
+                  placeholder="บน"
+                  className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-sm font-medium">โต๊ด</label>
+                <input
+                  ref={todRef}
+                  value={entry.tod}
+                  onChange={(e) => setEntry({ ...entry, tod: e.target.value })}
+                  onKeyDown={(e) => handleInputKeyDown(e, bottomRef)}
+                  placeholder="โต๊ด"
+                  className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-sm font-medium">
+                  2 ตัวล่าง
+                </label>
+                <input
+                  ref={bottomRef}
+                  value={entry.bottom2}
+                  onChange={(e) =>
+                    setEntry({ ...entry, bottom2: e.target.value })
+                  }
+                  onKeyDown={(e) => handleInputKeyDown(e, saveButtonRef)}
+                  placeholder="2 ตัวล่าง"
+                  className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+
+              <button
+                ref={saveButtonRef}
+                onClick={handleSave}
+                className="w-full mt-4 flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-2 font-semibold text-white transition hover:bg-emerald-600 active:scale-95"
+              >
+                <Plus className="h-5 w-5" /> บันทึก
+              </button>
+            </div>
           </div>
 
-          <button
-            ref={saveButtonRef}
-            onClick={handleSave}
-            className="mb-6 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-2 font-semibold shadow-lg transition hover:bg-emerald-600 active:scale-95"
-          >
-            <Plus className="h-5 w-5" /> บันทึก
-          </button>
-
-          {/* Table */}
-          {entries.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full table-auto border-collapse rounded-xl text-white">
-                <thead>
-                  <tr className="bg-white/20">
-                    <th className="px-4 py-2">ชื่อ</th>
-                    <th className="px-4 py-2">เลข</th>
-                    <th className="px-4 py-2">บน</th>
-                    <th className="px-4 py-2">โต๊ด</th>
-                    <th className="px-4 py-2">2 ตัวล่าง</th>
-                    <th className="px-4 py-2">ลบ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.map((e, index) => (
-                    <tr key={index} className="text-center">
-                      <td className="px-4 py-2">{e.buyerName}</td>
-                      <td className="px-4 py-2">{e.number}</td>
-                      <td className="px-4 py-2">{e.top}</td>
-                      <td className="px-4 py-2">{e.tod}</td>
-                      <td className="px-4 py-2">{e.bottom2}</td>
-                      <td className="px-4 py-2">
-                        <button
-                          onClick={() =>
-                            setEntries((prev) =>
-                              prev.filter((_, i) => i !== index)
-                            )
-                          }
-                          className="rounded p-1 text-red-300 hover:bg-white/20"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
+          {/* ฝั่งขวา: ตารางแสดงผล */}
+          <div className="flex-1 rounded-2xl bg-white/70 p-6 shadow-xl backdrop-blur-sm ring-1 ring-white/40">
+            <h2 className="mb-4 text-lg font-semibold text-blue-700">
+              รายการที่บันทึก
+            </h2>
+            {entries.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-slate-300 rounded-lg bg-white/90 shadow-md text-sm">
+                  <thead className="bg-blue-100 text-blue-800 font-semibold">
+                    <tr>
+                      <th className="px-3 py-2 border">ชื่อ</th>
+                      <th className="px-3 py-2 border">เลข</th>
+                      <th className="px-3 py-2 border">บน</th>
+                      <th className="px-3 py-2 border">โต๊ด</th>
+                      <th className="px-3 py-2 border">2 ตัวล่าง</th>
+                      <th className="px-3 py-2 border">เวลา</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {entries.map((item, index) => (
+                      <tr
+                        key={index}
+                        className="text-slate-700 even:bg-blue-50"
+                      >
+                        <td className="px-3 py-2 border">
+                          {item.data.buyerName}
+                        </td>
+                        <td className="px-3 py-2 border">{item.data.number}</td>
+                        <td className="px-3 py-2 border">{item.data.top}</td>
+                        <td className="px-3 py-2 border">{item.data.tod}</td>
+                        <td className="px-3 py-2 border">
+                          {item.data.bottom2}
+                        </td>
+                        <td className="px-3 py-2 border">
+                          {item.createdAtThai}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-slate-500">ยังไม่มีข้อมูลที่บันทึก</p>
+            )}
+          </div>
         </div>
       </section>
+
       {alertMessage && (
         <AlertPopup
           message={alertMessage}

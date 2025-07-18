@@ -34,6 +34,44 @@ export interface BlacklistNumber {
   number: string;
 }
 
+interface LotteryResult {
+  firstPrize: string;
+  lastTwoDigits: string;
+  threeDigitFront: { round: number; value: string }[];
+  threeDigitBack: { round: number; value: string }[];
+}
+
+interface LotteryResultResponse {
+  success: boolean;
+  date: {
+    date: string;
+    month: string;
+    year: string;
+  };
+  data: LotteryResult;
+}
+
+interface LotteryEntry {
+  buyerName: string;
+  number: string;
+  top?: string;
+  tod?: string;
+  bottom2?: string;
+}
+
+interface SaveLotteryResponse {
+  data: LotteryEntry & { _id: string; createdAt: string };
+  createdAtThai: string;
+}
+
+ interface CutConfig {
+  threeDigitTop: string;
+  threeDigitTod: string;
+  threeDigitBottom: string;
+  twoDigitTop: string;
+  twoDigitBottom: string;
+}
+
 export const apiClient = {
   login: (email: string, password: string) =>
     apiRequest<{ token: string }>("/api/auth/login", "POST", { email, password }),
@@ -67,4 +105,16 @@ export const apiClient = {
 
   deleteBlacklist: (id: string, token: string) =>
     apiRequest(`/api/blocknumber/${id}`, "DELETE", undefined, token),
+
+  getLotteryResult: () =>
+    apiRequest<LotteryResultResponse>("/api/lottery/result", "POST"),
+
+  saveLottery: (entry: LotteryEntry, token: string) =>
+    apiRequest<SaveLotteryResponse>("/api/entry/result", "POST", entry, token ),
+
+  saveCutConfig: (config: CutConfig, token: string) =>
+    apiRequest<{ data: CutConfig }>("/api/cut-config", "POST", config, token),
+
+  getCutConfig: (token: string) =>
+    apiRequest<{ data: CutConfig}>("/api/cut-config", "GET", undefined, token)
 };

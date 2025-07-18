@@ -19,7 +19,13 @@ export default function BuyersPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const { showLoading, hideLoading } = useLoading();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = buyers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(buyers.length / itemsPerPage);
 
   useAuthGuard();
 
@@ -41,27 +47,27 @@ export default function BuyersPage() {
     fetchBuyers();
   }, []);
 
-
   const addBuyer = async () => {
-  if (!name.trim()) return;
-  const token = getToken();
-  if (!token) return;
+    if (!name.trim()) return;
+    const token = getToken();
+    if (!token) return;
 
-  try {
-    showLoading();
+    try {
+      showLoading();
 
-    const response = await apiClient.addBuyer({ name, phone }, token);
-    const newBuyer = response.data;
-    setBuyers((prev) => [...prev, newBuyer]);
+      const response = await apiClient.addBuyer({ name, phone }, token);
+      const newBuyer = response.data;
+      setBuyers((prev) => [...prev, newBuyer]);
 
-    setName("");
-    setPhone("");
-  } catch (err) {
-    console.error("เพิ่ม buyer ล้มเหลว", err);
-  } finally {
-    hideLoading();
-  }
-};
+      setName("");
+      setPhone("");
+    } catch (err) {
+      console.error("เพิ่ม buyer ล้มเหลว", err);
+    } finally {
+      hideLoading();
+    }
+    setCurrentPage(1);
+  };
 
   const removeBuyer = async (id: number) => {
     const token = getToken();
@@ -74,7 +80,7 @@ export default function BuyersPage() {
     } catch (err) {
       console.error("ลบ buyer ล้มเหลว", err);
     } finally {
-       hideLoading();
+      hideLoading();
     }
   };
 
@@ -117,30 +123,58 @@ export default function BuyersPage() {
         </div>
 
         {/* List */}
-        {buyers.length === 0 ? (
+        {currentItems.length === 0 ? (
           <p className="text-center text-slate-300">ยังไม่มีรายชื่อ</p>
         ) : (
           <ul className="space-y-3">
-            {Array.isArray(buyers) && buyers.map((b) => (
-              <li
-                key={b._id}
-                className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm"
-              >
-                <span className="font-medium">
-                  {b.name}
-                  {b.phone && <span className="ml-2 text-sm text-slate-300">({b.phone})</span>}
-                </span>
-                <button
-                  onClick={() => removeBuyer(b._id)}
-                  className="rounded-md p-1 text-red-300 transition hover:bg-white/20"
+            {Array.isArray(currentItems) &&
+              currentItems.map((b) => (
+                <li
+                  key={b._id}
+                  className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm"
                 >
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </li>
-            ))}
+                  <span className="font-medium">
+                    {b.name}
+                    {b.phone && (
+                      <span className="ml-2 text-sm text-slate-300">
+                        ({b.phone})
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    onClick={() => removeBuyer(b._id)}
+                    className="rounded-md p-1 text-red-300 transition hover:bg-white/20"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </li>
+              ))}
           </ul>
         )}
       </div>
+      {buyers.length > itemsPerPage && (
+        <div className="mt-6 flex justify-center gap-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="rounded-md bg-white/20 px-3 py-1 text-sm text-white transition hover:bg-white/30 disabled:opacity-50"
+          >
+            ย้อนกลับ
+          </button>
+          <span className="px-2 py-1 text-white/80">
+            หน้า {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages}
+            className="rounded-md bg-white/20 px-3 py-1 text-sm text-white transition hover:bg-white/30 disabled:opacity-50"
+          >
+            ถัดไป
+          </button>
+        </div>
+      )}
     </section>
   );
 }
