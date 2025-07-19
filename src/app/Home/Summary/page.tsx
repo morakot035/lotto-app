@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/apiClient";
 import { getToken } from "@/lib/auth";
 import { useLoading } from "@/context/LoadingContext";
 import { formatThaiDateTime } from "@/utility/convertDate";
+import Link from "next/link";
 
 interface Buyers {
   _id: number;
@@ -200,9 +201,9 @@ export default function SummaryPage() {
 
     excelData.push({
       เลข: "รวม",
-      บน: sumColumn("dealer", "top"),
-      โต๊ด: sumColumn("dealer", "tod"),
-      ล่าง: sumColumn("dealer", "bottom"),
+      บน: sumColumn("dealer", "top").toLocaleString(),
+      โต๊ด: sumColumn("dealer", "tod").toLocaleString(),
+      ล่าง: sumColumn("dealer", "bottom").toLocaleString(),
       เวลา: "",
     });
 
@@ -224,6 +225,12 @@ export default function SummaryPage() {
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-blue-100 to-blue-200 px-6 py-10">
+      <Link
+        href="/Home"
+        className="absolute left-6 top-6 rounded-lg bg-white/10 px-3 py-1 text-sm backdrop-blur-md transition hover:bg-white/20"
+      >
+        ← กลับหน้าเมนู
+      </Link>
       <h1 className="text-center text-2xl font-bold text-blue-800 mb-6">
         สรุปยอดซื้อ
       </h1>
