@@ -72,6 +72,29 @@ interface SaveLotteryResponse {
   twoDigitBottom: string;
 }
 
+interface AmountDetail {
+  total: string;
+  kept: string;
+  sent: string;
+}
+
+interface EntryItem {
+  _id: string;
+  buyerName: string;
+  number: string;
+  top?: AmountDetail;
+  top2?: AmountDetail; // ใช้ในกรณี 2 ตัวบน (optional)
+  tod?: AmountDetail;
+  bottom2?: AmountDetail; // 2 ตัวล่าง (optional)
+  bottom3?: AmountDetail; // 3 ตัวล่าง (optional)
+  source: "self" | "dealer";
+  createdAtThai: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+
 export const apiClient = {
   login: (email: string, password: string) =>
     apiRequest<{ token: string }>("/api/auth/login", "POST", { email, password }),
@@ -116,5 +139,8 @@ export const apiClient = {
     apiRequest<{ data: CutConfig }>("/api/cut-config", "POST", config, token),
 
   getCutConfig: (token: string) =>
-    apiRequest<{ data: CutConfig}>("/api/cut-config", "GET", undefined, token)
+    apiRequest<{ data: CutConfig}>("/api/cut-config", "GET", undefined, token),
+
+  getEntriesByBuyer: (buyerName: string, token: string) =>
+  apiRequest<{ data: EntryItem[] }>(`/api/entry/by-buyer/${buyerName}`, "GET", undefined, token),
 };

@@ -21,7 +21,7 @@ const menu = [
   { title: "ตรวจหวย", href: "/Home/CheckLottery", icon: CheckCircle },
   { title: "ตั้งค่าตัดเก็บรายตัว", href: "/Home/CutSetting", icon: Sliders },
   { title: "ตั้งค่าเลขไม่รับซื้อ", href: "/Home/Blacklist", icon: Ban },
-  { title: "สรุปยอดซื้อ", href: "/home/summary", icon: FileText },
+  { title: "สรุปยอดซื้อ", href: "/Home/Summary", icon: FileText },
   { title: "สรุป 2 ตัว บน–ล่าง", href: "/home/summary-2", icon: Hash },
   { title: "สรุป 3 ตัว", href: "/home/summary-3", icon: Hash },
   { title: "สำรองข้อมูลทั้งหมด", href: "/home/backup", icon: Database },
