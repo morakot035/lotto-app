@@ -56,7 +56,7 @@ interface LotteryEntry {
   number: string;
   top?: string;
   tod?: string;
-  bottom2?: string;
+  bottom?: string;
 }
 
 interface SaveLotteryResponse {
@@ -109,8 +109,8 @@ export const apiClient = {
   getLotteryResult: () =>
     apiRequest<LotteryResultResponse>("/api/lottery/result", "POST"),
 
-  saveLottery: (entry: LotteryEntry, token: string) =>
-    apiRequest<SaveLotteryResponse>("/api/entry/result", "POST", entry, token ),
+  saveLottery: (entries: LotteryEntry[], token: string) =>
+    apiRequest<SaveLotteryResponse[]>("/api/entry/result", "POST", entries, token),
 
   saveCutConfig: (config: CutConfig, token: string) =>
     apiRequest<{ data: CutConfig }>("/api/cut-config", "POST", config, token),

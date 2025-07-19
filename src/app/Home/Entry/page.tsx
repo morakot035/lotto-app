@@ -20,24 +20,19 @@ interface LotteryEntry {
   number: string;
   top?: string;
   tod?: string;
-  bottom2?: string;
-}
-
-interface SaveLotteryResponse {
-  data: LotteryEntry & { _id: string; createdAt: string };
-  createdAtThai: string;
+  bottom?: string;
 }
 
 export default function EntryPage() {
   const [buyers, setBuyers] = useState<Buyers[]>([]);
-  const [entries, setEntries] = useState<SaveLotteryResponse[]>([]);
   const [entry, setEntry] = useState<LotteryEntry>({
     buyerName: "",
     number: "",
     top: "",
     tod: "",
-    bottom2: "",
+    bottom: "",
   });
+  const [preentry, setPreentry] = useState<LotteryEntry[]>([]);
 
   const { showLoading, hideLoading } = useLoading();
 
@@ -48,6 +43,7 @@ export default function EntryPage() {
   const saveButtonRef = useRef<HTMLButtonElement>(null);
   const [blacklistNumbers, setBlacklistNumbers] = useState<string[]>([]);
   const [alertMessage, setAlertMessage] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     const fetchBuyers = async () => {
@@ -96,19 +92,31 @@ export default function EntryPage() {
   };
 
   const handleSave = async () => {
+    try {
+      showLoading();
+      const token = getToken();
+      if (!token) return;
+
+      await apiClient.saveLottery(preentry, token); // ✅ ส่งหลายรายการ
+
+      // เคลียร์รายการหลังบันทึก
+      setPreentry([]);
+      setEntry({ buyerName: "", number: "", top: "", tod: "", bottom: "" });
+      setShowSuccessModal(true);
+    } catch (err) {
+      console.error("บันทึกหวยล้มเหลว", err);
+      setShowSuccessModal(true);
+    } finally {
+      hideLoading();
+    }
+  };
+
+  const handlePushData = () => {
     const numberLength = entry.number.trim().length;
 
     if (!entry.buyerName || (numberLength !== 2 && numberLength !== 3)) {
       setAlertMessage("กรุณากรอกเลขให้ถูกต้อง 2 หรือ 3 หลัก");
       return;
-    }
-
-    // กรณีเลข 3 หลัก
-    if (numberLength === 3) {
-      if (entry.bottom2) {
-        setAlertMessage("เลข 3 ตัวห้ามกรอกช่อง 2 ตัวล่าง");
-        return;
-      }
     }
 
     // กรณีเลข 2 หลัก
@@ -118,29 +126,21 @@ export default function EntryPage() {
         return;
       }
     }
+    const newPreentry = [...preentry, entry];
+    setPreentry(newPreentry);
+    setEntry({
+      buyerName: entry.buyerName,
+      number: "",
+      top: "",
+      tod: "",
+      bottom: "",
+    });
+    numberRef.current?.focus();
+  };
 
-    try {
-      showLoading();
-      const token = getToken();
-      if (!token) return;
-
-      const response = await apiClient.saveLottery(entry, token);
-
-      setEntries((prev) => [
-        ...prev,
-        {
-          data: response.data,
-          createdAtThai: response.createdAtThai,
-        },
-      ]);
-
-      setEntry({ buyerName: "", number: "", top: "", tod: "", bottom2: "" });
-    } catch (err) {
-      hideLoading();
-      console.error("บันทึกหวยล้มเหลว", err);
-    } finally {
-      hideLoading();
-    }
+  const handleDeleteEntry = (index: number) => {
+    const updated = preentry.filter((_, i) => i !== index);
+    setPreentry(updated);
   };
 
   return (
@@ -226,24 +226,22 @@ export default function EntryPage() {
               </div>
 
               <div>
-                <label className="block mb-1 text-sm font-medium">
-                  2 ตัวล่าง
-                </label>
+                <label className="block mb-1 text-sm font-medium">ล่าง</label>
                 <input
                   ref={bottomRef}
-                  value={entry.bottom2}
+                  value={entry.bottom}
                   onChange={(e) =>
-                    setEntry({ ...entry, bottom2: e.target.value })
+                    setEntry({ ...entry, bottom: e.target.value })
                   }
                   onKeyDown={(e) => handleInputKeyDown(e, saveButtonRef)}
-                  placeholder="2 ตัวล่าง"
+                  placeholder="ล่าง"
                   className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-blue-400"
                 />
               </div>
 
               <button
                 ref={saveButtonRef}
-                onClick={handleSave}
+                onClick={handlePushData}
                 className="w-full mt-4 flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-2 font-semibold text-white transition hover:bg-emerald-600 active:scale-95"
               >
                 <Plus className="h-5 w-5" /> บันทึก
@@ -256,7 +254,7 @@ export default function EntryPage() {
             <h2 className="mb-4 text-lg font-semibold text-blue-700">
               รายการที่บันทึก
             </h2>
-            {entries.length > 0 ? (
+            {preentry.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full border border-slate-300 rounded-lg bg-white/90 shadow-md text-sm">
                   <thead className="bg-blue-100 text-blue-800 font-semibold">
@@ -265,32 +263,40 @@ export default function EntryPage() {
                       <th className="px-3 py-2 border">เลข</th>
                       <th className="px-3 py-2 border">บน</th>
                       <th className="px-3 py-2 border">โต๊ด</th>
-                      <th className="px-3 py-2 border">2 ตัวล่าง</th>
-                      <th className="px-3 py-2 border">เวลา</th>
+                      <th className="px-3 py-2 border">ล่าง</th>
+                      <th className="px-3 py-2 border">ลบ</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {entries.map((item, index) => (
+                    {preentry.map((item, index) => (
                       <tr
                         key={index}
                         className="text-slate-700 even:bg-blue-50"
                       >
-                        <td className="px-3 py-2 border">
-                          {item.data.buyerName}
-                        </td>
-                        <td className="px-3 py-2 border">{item.data.number}</td>
-                        <td className="px-3 py-2 border">{item.data.top}</td>
-                        <td className="px-3 py-2 border">{item.data.tod}</td>
-                        <td className="px-3 py-2 border">
-                          {item.data.bottom2}
-                        </td>
-                        <td className="px-3 py-2 border">
-                          {item.createdAtThai}
+                        <td className="px-3 py-2 border">{item.buyerName}</td>
+                        <td className="px-3 py-2 border">{item.number}</td>
+                        <td className="px-3 py-2 border">{item.top}</td>
+                        <td className="px-3 py-2 border">{item.tod}</td>
+                        <td className="px-3 py-2 border">{item.bottom}</td>
+                        <td className="px-3 py-2 border text-center">
+                          <button
+                            onClick={() => handleDeleteEntry(index)}
+                            className="text-red-600 hover:underline"
+                            title="ลบรายการ"
+                          >
+                            🗑️
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                <button
+                  onClick={handleSave}
+                  className="w-full mt-4 flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-2 font-semibold text-white transition hover:bg-emerald-600 active:scale-95"
+                >
+                  <Plus className="h-5 w-5" /> บันทึกข้อมูลหวย
+                </button>
               </div>
             ) : (
               <p className="text-slate-500">ยังไม่มีข้อมูลที่บันทึก</p>
@@ -304,6 +310,25 @@ export default function EntryPage() {
           message={alertMessage}
           onClose={() => setAlertMessage("")}
         />
+      )}
+
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full text-center">
+            <h2 className="text-xl font-semibold text-emerald-700 mb-3">
+              ✅ บันทึกสำเร็จ
+            </h2>
+            <p className="text-gray-600 mb-4">
+              ระบบได้บันทึกข้อมูลคีย์หวยของคุณเรียบร้อยแล้ว
+            </p>
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition"
+            >
+              ปิด
+            </button>
+          </div>
+        </div>
       )}
     </>
   );
