@@ -86,8 +86,22 @@ export default function EntryPage() {
     e: React.KeyboardEvent<HTMLInputElement>,
     nextRef?: React.RefObject<HTMLInputElement | HTMLButtonElement | null>
   ) => {
-    if (e.key === "Enter" && nextRef?.current) {
-      nextRef.current.focus();
+    if (e.key === "Enter") {
+      // เช็กกรณีช่องกรอกเลข (numberRef)
+      if (e.currentTarget === numberRef.current) {
+        const currentNumber = e.currentTarget.value.trim();
+        if (currentNumber === "") {
+          // ถ้ายังไม่กรอกเลข → focus ค้างไว้
+          e.preventDefault();
+          numberRef.current?.focus();
+          return;
+        }
+      }
+
+      // ถ้าเลขถูกกรอกแล้ว หรือเป็นช่องอื่น → ไปช่องถัดไป
+      if (nextRef?.current) {
+        nextRef.current.focus();
+      }
     }
   };
 
@@ -114,8 +128,18 @@ export default function EntryPage() {
   const handlePushData = () => {
     const numberLength = entry.number.trim().length;
 
+    if (entry.number == "") {
+      setAlertMessage("กรุณากรอกเลขที่ซื้อให้ถูกต้อง");
+      return;
+    }
+
     if (!entry.buyerName || (numberLength !== 2 && numberLength !== 3)) {
       setAlertMessage("กรุณากรอกเลขให้ถูกต้อง 2 หรือ 3 หลัก");
+      return;
+    }
+
+    if (!entry.top && !entry.tod && !entry.bottom) {
+      setAlertMessage("กรุณากรอกยอดซื้ออย่างน้อยหนึ่งช่อง");
       return;
     }
 
@@ -141,6 +165,18 @@ export default function EntryPage() {
   const handleDeleteEntry = (index: number) => {
     const updated = preentry.filter((_, i) => i !== index);
     setPreentry(updated);
+  };
+
+  const calculateSum = (
+    data: LotteryEntry[],
+    key: "top" | "tod" | "bottom"
+  ) => {
+    return data
+      .reduce((sum, item) => {
+        const value = parseFloat(item[key] || "0");
+        return sum + (isNaN(value) ? 0 : value);
+      }, 0)
+      .toLocaleString();
   };
 
   return (
@@ -273,11 +309,21 @@ export default function EntryPage() {
                         key={index}
                         className="text-slate-700 even:bg-blue-50"
                       >
-                        <td className="px-3 py-2 border">{item.buyerName}</td>
-                        <td className="px-3 py-2 border">{item.number}</td>
-                        <td className="px-3 py-2 border">{item.top}</td>
-                        <td className="px-3 py-2 border">{item.tod}</td>
-                        <td className="px-3 py-2 border">{item.bottom}</td>
+                        <td className="px-3 py-2 border text-center">
+                          {item.buyerName}
+                        </td>
+                        <td className="px-3 py-2 border text-center">
+                          {item.number}
+                        </td>
+                        <td className="px-3 py-2 border text-center">
+                          {item.top}
+                        </td>
+                        <td className="px-3 py-2 border text-center">
+                          {item.tod}
+                        </td>
+                        <td className="px-3 py-2 border text-center">
+                          {item.bottom}
+                        </td>
                         <td className="px-3 py-2 border text-center">
                           <button
                             onClick={() => handleDeleteEntry(index)}
@@ -290,6 +336,22 @@ export default function EntryPage() {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr className="bg-blue-50 font-bold text-blue-800">
+                      <td className="px-3 py-2 border text-center">รวม</td>
+                      <td className="px-3 py-2 border text-center"></td>
+                      <td className="px-3 py-2 border text-center">
+                        {calculateSum(preentry, "top")} บาท
+                      </td>
+                      <td className="px-3 py-2 border text-center">
+                        {calculateSum(preentry, "tod")} บาท
+                      </td>
+                      <td className="px-3 py-2 border text-center">
+                        {calculateSum(preentry, "bottom")} บาท
+                      </td>
+                      <td className="px-3 py-2 border text-center"></td>
+                    </tr>
+                  </tfoot>
                 </table>
                 <button
                   onClick={handleSave}

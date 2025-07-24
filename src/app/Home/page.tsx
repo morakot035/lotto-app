@@ -22,8 +22,8 @@ const menu = [
   { title: "ตั้งค่าตัดเก็บรายตัว", href: "/Home/CutSetting", icon: Sliders },
   { title: "ตั้งค่าเลขไม่รับซื้อ", href: "/Home/Blacklist", icon: Ban },
   { title: "สรุปยอดซื้อ", href: "/Home/Summary", icon: FileText },
-  { title: "สรุป 2 ตัว บน–ล่าง", href: "/home/summary-2", icon: Hash },
-  { title: "สรุป 3 ตัว", href: "/home/summary-3", icon: Hash },
+  { title: "สรุป 2 ตัว บน–ล่าง", href: "/Home/SummaryTwoDigit", icon: Hash },
+  { title: "สรุป 3 ตัว", href: "/Home/SummaryThreeDigit", icon: Hash },
   { title: "สำรองข้อมูลทั้งหมด", href: "/home/backup", icon: Database },
   { title: "สรุปเลขทั้งหมด", href: "/home/summary-all", icon: ListOrdered },
 ];
