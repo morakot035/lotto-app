@@ -179,6 +179,25 @@ export default function EntryPage() {
       .toLocaleString();
   };
 
+  const calculateAllSum = (data: LotteryEntry[]) => {
+    let sumTop = 0;
+    let sumTod = 0;
+    let sumBottom = 0;
+
+    data.forEach((item) => {
+      sumTop += parseFloat(item.top || "0");
+      sumTod += parseFloat(item.tod || "0");
+      sumBottom += parseFloat(item.bottom || "0");
+    });
+
+    return {
+      sumTop,
+      sumTod,
+      sumBottom,
+      total: sumTop + sumTod + sumBottom,
+    };
+  };
+
   return (
     <>
       <section className="min-h-screen bg-gradient-to-br from-sky-100 to-blue-200 px-4 py-10 text-gray-800 flex flex-col items-center">
@@ -351,6 +370,29 @@ export default function EntryPage() {
                       </td>
                       <td className="px-3 py-2 border text-center"></td>
                     </tr>
+
+                    {/* บรรทัดรวมยอดแต่ละประเภท */}
+                    {(() => {
+                      const { total } = calculateAllSum(preentry);
+                      return (
+                        <>
+                          <tr className="bg-emerald-200 text-emerald-800 font-bold text-lg">
+                            <td
+                              colSpan={4}
+                              className="px-3 py-3 border text-right"
+                            >
+                              💰 รวมยอดทั้งหมด:
+                            </td>
+                            <td
+                              colSpan={2}
+                              className="px-3 py-3 border text-left"
+                            >
+                              {total.toLocaleString()} บาท
+                            </td>
+                          </tr>
+                        </>
+                      );
+                    })()}
                   </tfoot>
                 </table>
                 <button
