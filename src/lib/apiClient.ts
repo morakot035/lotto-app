@@ -94,6 +94,28 @@ interface EntryItem {
   __v: number;
 }
 
+interface WinnerType {
+  type: string;
+  amount: AmountDetail;
+}
+
+interface WinnerItem {
+  name: string;
+  number: string;
+  source: "self" | "dealer";
+  matchedTypes: WinnerType[];
+}
+
+interface WinnerResponse {
+  success: boolean;
+  date: {
+    date: string;
+    month: string;
+    year: string;
+  };
+  winners: WinnerItem[];
+}
+
 
 export const apiClient = {
   login: (email: string, password: string) =>
@@ -144,5 +166,6 @@ export const apiClient = {
   getEntriesByBuyer: (buyerName: string, token: string) =>
   apiRequest<{ data: EntryItem[] }>(`/api/entry/by-buyer/${buyerName}`, "GET", undefined, token),
 
-  deleteEntries: (token: string) => apiRequest(`/api/entry/delete`, "DELETE",undefined, token)
+  deleteEntries: (token: string) => apiRequest(`/api/entry/delete`, "DELETE",undefined, token),
+   getWinners: (token: string) => apiRequest<WinnerResponse>("/api/lottery/check-winners", "GET", undefined, token)
 };

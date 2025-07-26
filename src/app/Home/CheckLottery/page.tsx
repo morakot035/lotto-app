@@ -1,23 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
 import Link from "next/link";
-import { apiClient } from "@/lib/apiClient"; // แก้ path ตามโปรเจกต์คุณ
+import { apiClient } from "@/lib/apiClient";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 import { useLoading } from "@/context/LoadingContext";
+import { getToken } from "@/lib/auth";
 
 dayjs.locale("th");
-
-interface Entry {
-  buyerName: string;
-  number: string;
-  amount: number;
-  discount: number;
-  win: boolean;
-  winAmount: number;
-}
 
 interface LotteryResult {
   firstPrize: string;
@@ -36,9 +27,34 @@ interface LotteryResultResponse {
   data: LotteryResult;
 }
 
+interface AmountDetail {
+  total: string;
+  kept: string;
+  sent: string;
+}
+
+interface WinnerType {
+  type: string;
+  amount: AmountDetail;
+}
+
+interface WinnerItem {
+  name: string;
+  number: string;
+  source: "self" | "dealer";
+  matchedTypes: WinnerType[];
+}
+
+const PAY_RATES: Record<string, number> = {
+  "2 ตัวบน": 65,
+  "2 ตัวล่าง": 65,
+  "3 ตัวบน": 450,
+  โต๊ด: 95,
+  "3 ตัวล่าง": 95,
+};
+
 export default function CheckLotteryPage() {
-  const [number, setNumber] = useState("");
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [winners, setWinners] = useState<WinnerItem[]>([]);
   const [checked, setChecked] = useState(false);
   const [lotteryResult, setLotteryResult] =
     useState<LotteryResultResponse | null>(null);
@@ -52,7 +68,6 @@ export default function CheckLotteryPage() {
         const res = await apiClient.getLotteryResult();
         setLotteryResult(res);
 
-        // แปลงวันที่ให้เป็นรูปแบบ "วันที่ 16 กรกฎาคม 2568"
         const { date, month, year } = res.date;
         const yearThai = (parseInt(year) + 543).toString();
         const formatted = dayjs(`${yearThai}-${month}-${date}`).format(
@@ -61,7 +76,6 @@ export default function CheckLotteryPage() {
         setLotteryDate(formatted);
       } catch (err) {
         console.error("ดึงผลหวยไม่สำเร็จ", err);
-        hideLoading();
       } finally {
         hideLoading();
       }
@@ -70,208 +84,150 @@ export default function CheckLotteryPage() {
     fetchResult();
   }, []);
 
-  // Mock รางวัล (สามารถดึงจาก API ได้)
-
-  const prize = {
-    first: "452643",
-    twoDigit: "99",
-    threeDigitFront: ["726", "594"],
-    threeDigitLast: ["810", "361"],
-  };
-  const winningNumbers = [
-    prize.twoDigit,
-    ...prize.threeDigitFront,
-    ...prize.threeDigitLast,
-  ];
-
-  const handleCheck = () => {
-    const newEntries = [
-      {
-        buyerName: "Mr. Admin - BIGGROUP",
-        number,
-        amount: 200,
-        discount: 0.05,
-        win: winningNumbers.includes(number),
-        winAmount: winningNumbers.includes(number) ? 90000 : 0,
-      },
-    ];
-    setEntries(newEntries);
-    setChecked(true);
+  const handleCheck = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      showLoading();
+      const res = await apiClient.getWinners(token);
+      setWinners(res.winners);
+      setChecked(true);
+    } catch (err) {
+      console.error("เกิดข้อผิดพลาด", err);
+      alert("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+    } finally {
+      hideLoading();
+    }
   };
 
-  const calculateTotal = () => {
-    let totalBuy = 0;
-    let totalDiscount = 0;
-    let totalWin = 0;
+  // const calculateTotalWinningAmount = () => {
+  //   return winners
+  //     .flatMap((w) => w.matchedTypes)
+  //     .reduce((sum, type) => {
+  //       const rate = PAY_RATES[type.type] || 0;
+  //       const keptAmount = Number(type.amount.kept); // จำนวนเงินที่ซื้อ
+  //       return sum + keptAmount * rate;
+  //     }, 0);
+  // };
 
-    entries.forEach((e) => {
-      totalBuy += e.amount;
-      totalDiscount += e.amount * e.discount;
-      totalWin += e.winAmount;
-    });
-
-    return {
-      totalBuy,
-      totalDiscount,
-      netPay: totalBuy - totalDiscount,
-      netResult: totalWin - (totalBuy - totalDiscount),
-    };
-  };
-
-  const result = calculateTotal();
+  function calculateWinnerAmount(winner: WinnerItem): number {
+    return winner.matchedTypes.reduce((sum, type) => {
+      const rate = PAY_RATES[type.type] || 0;
+      const kept = Number(type.amount.kept);
+      return sum + kept * rate;
+    }, 0);
+  }
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-indigo-900 via-sky-800/70 to-emerald-700 px-4 py-12 text-white">
+    <section className="min-h-screen bg-gray-100 px-4 py-12 text-gray-800">
       <Link
         href="/Home"
         className="absolute left-6 top-6 rounded-lg bg-white/10 px-3 py-1 text-sm backdrop-blur-md transition hover:bg-white/20"
       >
         ← กลับหน้าเมนู
       </Link>
-      <div className="mx-auto max-w-4xl space-y-8 rounded-3xl bg-white/10 p-8 shadow-xl ring-1 ring-white/15 backdrop-blur">
-        {/* ✅ แสดงผลรางวัล */}
+      <div className="mx-auto max-w-4xl space-y-10">
         {lotteryResult && (
-          <div className="rounded-xl bg-white/10 p-6 shadow ring-1 ring-white/10">
-            <h2 className="text-lg font-semibold mb-3">
-              📅 ตรวจหวย {lotteryDate}
+          <div className="bg-white p-6 rounded-xl shadow ring-1 ring-gray-200">
+            <h2 className="text-lg font-semibold mb-4">
+              📅 ผลสลากประจำวันที่ {lotteryDate}
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center text-sm sm:text-base">
-              <div className="bg-sky-700/40 rounded-lg py-2">
-                รางวัลที่ 1<br />
-                <span className="font-bold text-lg">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-sm">รางวัลที่ 1</p>
+                <p className="text-xl font-bold">
                   {lotteryResult.data.firstPrize}
-                </span>
+                </p>
               </div>
-              <div className="bg-indigo-700/40 rounded-lg py-2">
-                เลขท้าย 2 ตัว
-                <br />
-                <span className="font-bold text-lg">
+              <div>
+                <p className="text-sm">เลขท้าย 2 ตัว</p>
+                <p className="text-xl font-bold">
                   {lotteryResult.data.lastTwoDigits}
-                </span>
+                </p>
               </div>
-              <div className="bg-purple-700/40 rounded-lg py-2">
-                เลขหน้า 3 ตัว
-                <br />
-                {lotteryResult.data.threeDigitFront
-                  .map((f) => f.value)
-                  .join(" / ")}
+              <div>
+                <p className="text-sm">เลขหน้า 3 ตัว</p>
+                <p>
+                  {lotteryResult.data.threeDigitFront
+                    .map((f) => f.value)
+                    .join(" / ")}
+                </p>
               </div>
-              <div className="bg-rose-700/40 rounded-lg py-2">
-                เลขท้าย 3 ตัว
-                <br />
-                {lotteryResult.data.threeDigitBack
-                  .map((b) => b.value)
-                  .join(" / ")}
+              <div>
+                <p className="text-sm">เลขท้าย 3 ตัว</p>
+                <p>
+                  {lotteryResult.data.threeDigitBack
+                    .map((b) => b.value)
+                    .join(" / ")}
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* ✅ ช่องตรวจหวย */}
-        <div className="flex items-center gap-4">
-          <input
-            value={number}
-            onChange={(e) => setNumber(e.target.value)}
-            placeholder="ใส่เลขที่ต้องการตรวจ"
-            className="flex-1 rounded-xl bg-white/20 px-4 py-2 text-white placeholder:text-slate-300 outline-none"
-          />
+        <div className="flex justify-center">
           <button
             onClick={handleCheck}
-            className="rounded-xl bg-emerald-500 px-4 py-2 font-semibold shadow hover:bg-emerald-600"
+            className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-6 py-2 rounded shadow"
           >
-            <Search className="inline-block h-5 w-5 mr-1" /> ตรวจ
+            ตรวจหวย
           </button>
         </div>
 
-        {/* ✅ แสดงผลการตรวจ */}
-        {checked && entries.length > 0 && (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* ด้านซ้าย: ข้อมูลทั่วไป */}
-            <div className="rounded-xl bg-white/10 p-4 shadow ring-1 ring-white/10">
-              <h2 className="mb-3 text-lg font-bold">📋 ผลการตรวจ เลขโต๊ด</h2>
-              <p>ชื่อ: {entries[0].buyerName}</p>
-              <p>
-                เลข: <strong>{entries[0].number}</strong>
-              </p>
-              <p>ราคาซื้อ: {entries[0].amount} บาท</p>
-              <p>ส่วนลด: {entries[0].discount * 100}%</p>
-              <p>
-                ราคาที่ต้องชำระ = {entries[0].amount} -{" "}
-                {entries[0].amount * entries[0].discount} ={" "}
-                <strong>
-                  {entries[0].amount - entries[0].amount * entries[0].discount}
-                </strong>{" "}
+        {checked && winners.length > 0 && (
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold">🎉 รายชื่อผู้ถูกรางวัล</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {winners.map((winner, index) => (
+                <div
+                  key={index}
+                  className="bg-white p-4 rounded-xl shadow ring-1 ring-gray-200 space-y-2"
+                >
+                  <h3 className="font-medium">🧑‍💼 {winner.name}</h3>
+                  <p>
+                    เลขที่ซื้อ: <strong>{winner.number}</strong>
+                  </p>
+                  {winner.matchedTypes.map((match, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-gray-50 p-3 rounded border text-sm"
+                    >
+                      <p>ประเภท: {match.type}</p>
+                      <p>
+                        ยอดรวม: {Number(match.amount.total).toLocaleString()}{" "}
+                        บาท
+                      </p>
+                      <p>
+                        เก็บเอง: {Number(match.amount.kept).toLocaleString()}{" "}
+                        บาท
+                      </p>
+                      <p>
+                        ส่งเจ้ามือ: {Number(match.amount.sent).toLocaleString()}{" "}
+                        บาท
+                      </p>
+                    </div>
+                  ))}
+                  <p className="text-emerald-600 font-semibold">
+                    ✅ รวมยอดที่ได้รับ:{" "}
+                    {calculateWinnerAmount(winner).toLocaleString()} บาท
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow ring-1 ring-gray-200">
+              <h3 className="text-lg font-semibold mb-2">
+                💰 สรุปรวมยอดถูกรางวัล
+              </h3>
+              <p>จำนวนผู้ถูกรางวัล: {winners.length} คน</p>
+              <p className="text-emerald-600 font-bold">
+                ✅ ยอดถูกรางวัลรวมทั้งหมด:{" "}
+                {winners
+                  .reduce((sum, w) => sum + calculateWinnerAmount(w), 0)
+                  .toLocaleString()}{" "}
                 บาท
               </p>
             </div>
-
-            {/* ด้านขวา: สรุปผล */}
-            <div className="rounded-xl bg-white/10 p-4 shadow ring-1 ring-white/10">
-              <h2 className="mb-3 text-lg font-bold">📊 สรุปผลรางวัล</h2>
-              <p>ถูกรางวัล: {entries[0].win ? "✅ ใช่" : "❌ ไม่ใช่"}</p>
-              <p>
-                ยอดถูกรางวัล:{" "}
-                <strong>{entries[0].winAmount.toLocaleString()} บาท</strong>
-              </p>
-              <p>ยอดซื้อสุทธิ: {result.netPay.toLocaleString()} บาท</p>
-              <p
-                className={
-                  result.netResult >= 0 ? "text-green-400" : "text-red-400"
-                }
-              >
-                สรุป: {result.netResult >= 0 ? "กำไร" : "ขาดทุน"}{" "}
-                {Math.abs(result.netResult).toLocaleString()} บาท
-              </p>
-            </div>
-            {result && entries.length > 0 && (
-              <div className="col-span-full rounded-xl bg-white/10 p-6 ring-1 ring-white/10 text-sm sm:text-base">
-                <h2 className="mb-4 text-lg font-semibold">
-                  ผลการตรวจ สอง-สามตัว บน-ล่าง
-                </h2>
-
-                <div className="border-b border-white/20 pb-3 mb-3 flex justify-between">
-                  <span>ประเภทหวย</span>
-                  <span>สามตัวบน</span>
-                </div>
-
-                <div className="space-y-1">
-                  <p>ชื่อ: {entries[0].buyerName}</p>
-                  <p>
-                    เลข: <span className="font-bold">{entries[0].number}</span>
-                  </p>
-                  <p>ราคาซื้อ: {entries[0].amount} บาท</p>
-                  <p>มีส่วนลด (ถ้ามี): {entries[0].discount * 100} %</p>
-                  <p>
-                    ราคาหวยที่ซื้อทั้งหมด:{" "}
-                    <span className="font-bold">
-                      {entries[0].amount + 960} บาท
-                    </span>{" "}
-                    {/* คุณจะต้องคำนวณจริงใน logic หรือรวมหลายรายการถ้ามี */}
-                  </p>
-                  <p className="mt-3 font-semibold">วิธีคำนวณค่าหวย</p>
-                  <p>ค่าหวยที่ซื้อทั้งหมด - ส่วนลด% (ถ้ามี)</p>
-                  <p>ถ้าถูกหวย = ราคาที่ซื้อ × ราคาหวย</p>
-                  <p>
-                    จากสูตร = {entries[0].amount + 960} -{" "}
-                    {((entries[0].amount + 960) * entries[0].discount).toFixed(
-                      2
-                    )}
-                  </p>
-                  <p>จากสูตร = {entries[0].amount} × 450 บาท</p>
-                  <p>
-                    ดังนั้น ={" "}
-                    {entries[0].win
-                      ? `${entries[0].winAmount.toLocaleString()} - ${
-                          result.netPay
-                        }`
-                      : `0 - ${result.netPay}`}
-                  </p>
-                  <p className="mt-2 font-bold text-emerald-400">
-                    รวมเงิน: {result.netResult.toLocaleString()} บาท
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
