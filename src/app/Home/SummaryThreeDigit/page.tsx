@@ -1,13 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  Autocomplete,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -21,12 +14,6 @@ import { useLoading } from "@/context/LoadingContext";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-
-interface Buyers {
-  _id: number;
-  name: string;
-  phone: string;
-}
 
 interface AmountDetail {
   total: string;
@@ -46,51 +33,26 @@ interface EntryItem {
 }
 
 export default function SummaryThreeDigitPage() {
-  const [buyers, setBuyers] = useState<Buyers[]>([]);
-  const [selectedBuyer, setSelectedBuyer] = useState<Buyers | null>(null);
   const [entries, setEntries] = useState<EntryItem[]>([]);
-  const [openModal, setOpenModal] = useState(false);
   const { showLoading, hideLoading } = useLoading();
 
   useEffect(() => {
-    const fetchBuyers = async () => {
+    const fetchEntries = async () => {
       const token = getToken();
       if (!token) return;
       showLoading();
       try {
-        const res = await apiClient.getBuyers(token);
-        setBuyers(res.data);
+        const res = await apiClient.getAll(token);
+        setEntries(res.data);
       } catch (err) {
-        console.error("โหลดรายชื่อผู้ซื้อไม่สำเร็จ", err);
+        console.error("โหลดข้อมูลไม่สำเร็จ", err);
       } finally {
         hideLoading();
       }
     };
-    fetchBuyers();
+    fetchEntries();
   }, []);
 
-  const fetchSummary = async (buyerName: string) => {
-    const token = getToken();
-    if (!token) return;
-    showLoading();
-    try {
-      const res = await apiClient.getEntriesByBuyer(buyerName, token);
-      setEntries(res.data);
-    } catch (err) {
-      console.error("โหลดข้อมูลไม่สำเร็จ", err);
-    } finally {
-      hideLoading();
-    }
-  };
-
-  const handleBuyerChange = (buyer: Buyers | null) => {
-    setSelectedBuyer(buyer);
-    if (buyer) {
-      fetchSummary(buyer.name);
-    } else {
-      setEntries([]);
-    }
-  };
   const sum = (
     field: "top" | "tod" | "bottom3",
     subfield: "kept" | "sent",
@@ -114,31 +76,32 @@ export default function SummaryThreeDigitPage() {
   };
 
   const filtered = entries.filter((e) => e.top || e.tod || e.bottom3);
+  const keptEntries = filtered;
+  const sentEntries = filtered;
 
-  const filteredSelf = filtered.filter((e) => e.source === "self");
-
-  const handleExportExcel = () => {
-    const rows = filteredSelf.map((item) => ({
+  const handleExportExcel = (type: "kept" | "sent") => {
+    const rows = filtered.map((item) => ({
       เลข: item.number,
-      "3 ตัวบน": item.top?.sent || 0,
-      โต๊ด: item.tod?.sent || 0,
-      ล่าง: item.bottom3?.sent || 0,
+      "3 ตัวบน": item.top?.[type] || 0,
+      "3 ตัวโต๊ด": item.tod?.[type] || 0,
+      "3 ตัวล่าง": item.bottom3?.[type] || 0,
     }));
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "เจ้ามือหวย");
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      type === "kept" ? "ตัดเก็บ" : "ตัดส่ง"
+    );
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(data, `เจ้ามือหวย_${selectedBuyer?.name}.xlsx`);
+    saveAs(data, `สรุปยอด_${type}.xlsx`);
   };
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-green-100 to-emerald-200 px-6 py-10">
-      <h1 className="text-2xl font-bold text-emerald-800 text-center mb-6">
-        สรุปยอดเลข 3 ตัว
-      </h1>
+    <section className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-100 px-4 py-8">
       <Link
         href="/Home"
         className="absolute left-6 top-6 rounded-lg bg-white/10 px-3 py-1 text-sm backdrop-blur-md transition hover:bg-white/20"
@@ -146,165 +109,181 @@ export default function SummaryThreeDigitPage() {
         ← กลับหน้าเมนู
       </Link>
 
-      <div className="max-w-xl mx-auto mb-6">
-        <Autocomplete
-          options={buyers}
-          getOptionLabel={(option) => option.name}
-          value={selectedBuyer}
-          onChange={(event, newValue) => handleBuyerChange(newValue)}
-          renderInput={(params) => (
-            <TextField {...params} label="ค้นหาผู้ซื้อ" variant="outlined" />
-          )}
-        />
-      </div>
+      <h1 className="text-2xl font-bold text-orange-800 text-center mb-6">
+        📊 สรุปยอดตัดเก็บ และตัดส่ง เลข 3 ตัว
+      </h1>
 
-      {filtered.length > 0 ? (
-        <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-          <table className="w-full text-sm border border-gray-300">
-            <thead className="bg-emerald-100 font-semibold">
-              <tr>
-                <th className="border px-2 py-1">เลข</th>
-                <th className="border px-2 py-1">3 ตัวบน</th>
-                <th className="border px-2 py-1">โต๊ด</th>
-                <th className="border px-2 py-1">ล่าง</th>
-                <th className="border px-2 py-1">เวลา</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((item) => (
-                <tr key={item._id} className="even:bg-emerald-50 text-center">
-                  <td className="border px-2 py-1">{item.number}</td>
-                  <td className="border px-2 py-1">{item.top?.kept || "-"}</td>
-                  <td className="border px-2 py-1">{item.tod?.kept || "-"}</td>
-                  <td className="border px-2 py-1">
-                    {item.bottom3?.kept || "-"}
-                  </td>
-                  <td className="border px-2 py-1">{item.createdAtThai}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="font-bold bg-green-100 text-right">
-                <td className="border px-2 py-1 text-right">รวม</td>
-                <td className="border px-2 py-1 text-center">
-                  {sum("top", "kept").toLocaleString()} บาท
-                </td>
-                <td className="border px-2 py-1 text-center">
-                  {sum("tod", "kept").toLocaleString()} บาท
-                </td>
-                <td className="border px-2 py-1 text-center">
-                  {sum("bottom3", "kept").toLocaleString()} บาท
-                </td>
-                <td className="border px-2 py-1 text-center font-bold text-emerald-700"></td>
-              </tr>
-            </tfoot>
-          </table>
-
-          {/* รวมทั้งสิ้น */}
-          <div className="mt-4 p-3 bg-emerald-100 text-right font-semibold rounded">
-            ✅ รวมทั้งสิ้น:{" "}
-            <span className="text-lg text-emerald-800 font-bold">
-              {sumTotal("kept").toLocaleString()} บาท
-            </span>
-          </div>
-
-          {/* ปุ่มส่งเจ้ามือหวย */}
-          <div className="mt-4 text-right">
-            {selectedBuyer && (
-              <button
-                onClick={() => setOpenModal(true)}
-                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
-              >
-                📤 ส่งให้เจ้ามือหวย
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        selectedBuyer && (
-          <p className="text-center text-gray-500 mt-10">
-            ไม่พบข้อมูลเลข 3 ตัว
-          </p>
-        )
-      )}
-
-      <Dialog
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>รายการที่จะส่งให้เจ้ามือหวย</DialogTitle>
-        <DialogContent>
-          <Table>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+        {/* ตัดเก็บ */}
+        <div className="bg-white/80 p-4 rounded-xl shadow-md">
+          <h2 className="text-lg font-semibold text-green-700 mb-4 text-center">
+            📦 สรุปยอดตัดเก็บ (kept)
+          </h2>
+          <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell align="center">เลข</TableCell>
-                <TableCell align="center">3 ตัวบน </TableCell>
-                <TableCell align="center">โต๊ด </TableCell>
-                <TableCell align="center">ล่าง </TableCell>
-                <TableCell align="center"> </TableCell>
+                <TableCell align="center">3 ตัวบน</TableCell>
+                <TableCell align="center">3 โต๊ด</TableCell>
+                <TableCell align="center">3 ตัวล่าง</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredSelf.map((item) => (
+              {keptEntries.map((item) => (
                 <TableRow key={item._id}>
                   <TableCell align="center">{item.number}</TableCell>
                   <TableCell align="center">
-                    {item.top?.sent.toLocaleString() || "-"}
+                    {item.top?.kept
+                      ? parseFloat(item.top.kept).toLocaleString()
+                      : "-"}
                   </TableCell>
                   <TableCell align="center">
-                    {item.tod?.sent.toLocaleString() || "-"}
+                    {item.tod?.kept
+                      ? parseFloat(item.tod.kept).toLocaleString()
+                      : "-"}
                   </TableCell>
                   <TableCell align="center">
-                    {item.bottom3?.sent || "-"}
+                    {item.bottom3?.kept
+                      ? parseFloat(item.bottom3.kept).toLocaleString()
+                      : "-"}
                   </TableCell>
-                  <TableCell align="center"></TableCell>
                 </TableRow>
               ))}
             </TableBody>
             <TableFooter>
-              <TableRow>
-                <TableCell align="center" className="font-bold">
+              <TableRow className="bg-emerald-100">
+                <TableCell
+                  align="center"
+                  className="font-bold text-emerald-900"
+                >
                   รวม
                 </TableCell>
-                <TableCell align="center">
-                  {sum("top", "sent", filteredSelf).toLocaleString()} บาท
-                </TableCell>
-                <TableCell align="center">
-                  {sum("tod", "sent", filteredSelf).toLocaleString()} บาท
-                </TableCell>
-                <TableCell align="center">
-                  {sum("bottom3", "sent", filteredSelf).toLocaleString()} บาท
-                </TableCell>
-                <TableCell />
-              </TableRow>
-              <TableRow>
                 <TableCell
-                  colSpan={5}
                   align="center"
-                  className="font-bold text-emerald-700"
+                  className="text-emerald-900 font-semibold"
                 >
-                  รวมยอดส่งให้เจ้ามือทั้งหมด:{" "}
-                  {sumTotal("sent", filteredSelf).toLocaleString()} บาท
+                  {sum("top", "kept", keptEntries).toLocaleString()} บาท
+                </TableCell>
+                <TableCell
+                  align="center"
+                  className="text-emerald-900 font-semibold"
+                >
+                  {sum("tod", "kept", keptEntries).toLocaleString()} บาท
+                </TableCell>
+                <TableCell
+                  align="center"
+                  className="text-emerald-900 font-semibold"
+                >
+                  {sum("bottom3", "kept", keptEntries).toLocaleString()} บาท
+                </TableCell>
+              </TableRow>
+              <TableRow className="bg-emerald-200 border-t border-emerald-300">
+                <TableCell
+                  colSpan={4}
+                  align="center"
+                  className="text-emerald-900 font-bold text-lg py-3"
+                >
+                  ✅ รวมตัดเก็บ:{" "}
+                  {sumTotal("kept", keptEntries).toLocaleString()} บาท
                 </TableCell>
               </TableRow>
             </TableFooter>
           </Table>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            variant="contained"
-            onClick={() => handleExportExcel()}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            📥 Export Excel
-          </Button>
-          <Button onClick={() => setOpenModal(false)} color="inherit">
-            ปิด
-          </Button>
-        </DialogActions>
-      </Dialog>
+          <div className="mt-3 text-right">
+            <button
+              onClick={() => handleExportExcel("kept")}
+              className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
+            >
+              📤 Export Excel
+            </button>
+          </div>
+        </div>
+
+        {/* ตัดส่ง */}
+        <div className="bg-white/80 p-4 rounded-xl shadow-md">
+          <h2 className="text-lg font-semibold text-red-700 mb-4 text-center">
+            🚚 สรุปยอดตัดส่ง (sent)
+          </h2>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell align="center">เลข</TableCell>
+                <TableCell align="center">3 ตัวบน</TableCell>
+                <TableCell align="center">3 โต๊ด</TableCell>
+                <TableCell align="center">3 ตัวล่าง</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sentEntries.map((item) => (
+                <TableRow key={item._id}>
+                  <TableCell align="center">{item.number}</TableCell>
+                  <TableCell align="center">
+                    {item.top?.kept
+                      ? parseFloat(item.top.sent).toLocaleString()
+                      : "-"}
+                  </TableCell>
+                  <TableCell align="center">
+                    {item.tod?.kept
+                      ? parseFloat(item.tod.sent).toLocaleString()
+                      : "-"}
+                  </TableCell>
+                  <TableCell align="center">
+                    {item.bottom3?.kept
+                      ? parseFloat(item.bottom3.sent).toLocaleString()
+                      : "-"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow className="bg-emerald-100">
+                <TableCell
+                  align="center"
+                  className="font-bold text-emerald-900"
+                >
+                  รวม
+                </TableCell>
+                <TableCell
+                  align="center"
+                  className="font-bold text-emerald-900"
+                >
+                  {sum("top", "sent", sentEntries).toLocaleString()} บาท
+                </TableCell>
+                <TableCell
+                  align="center"
+                  className="font-bold text-emerald-900"
+                >
+                  {sum("tod", "sent", sentEntries).toLocaleString()} บาท
+                </TableCell>
+                <TableCell
+                  align="center"
+                  className="font-bold text-emerald-900"
+                >
+                  {sum("bottom3", "sent", sentEntries).toLocaleString()} บาท
+                </TableCell>
+              </TableRow>
+              <TableRow className="bg-emerald-200 border-t border-emerald-300">
+                <TableCell
+                  colSpan={4}
+                  align="center"
+                  className="text-emerald-900 font-bold text-lg py-3"
+                >
+                  ✅ รวมตัดส่ง: {sumTotal("sent", sentEntries).toLocaleString()}{" "}
+                  บาท
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+          <div className="mt-3 text-right">
+            <button
+              onClick={() => handleExportExcel("sent")}
+              className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
+            >
+              📥 Export Excel
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
