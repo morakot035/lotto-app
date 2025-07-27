@@ -80,12 +80,35 @@ export default function SummaryThreeDigitPage() {
   const sentEntries = filtered;
 
   const handleExportExcel = (type: "kept" | "sent") => {
-    const rows = filtered.map((item) => ({
+    const rows: Partial<
+      Record<"เลข" | "3 ตัวบน" | "3 ตัวโต๊ด" | "3 ตัวล่าง", string | number>
+    >[] = filtered.map((item) => ({
       เลข: item.number,
-      "3 ตัวบน": item.top?.[type] || 0,
-      "3 ตัวโต๊ด": item.tod?.[type] || 0,
-      "3 ตัวล่าง": item.bottom3?.[type] || 0,
+      "3 ตัวบน": item.top?.[type] ? parseFloat(item.top[type]) : 0,
+      "3 ตัวโต๊ด": item.tod?.[type] ? parseFloat(item.tod[type]) : 0,
+      "3 ตัวล่าง": item.bottom3?.[type] ? parseFloat(item.bottom3[type]) : 0,
     }));
+
+    // คำนวณยอดรวม
+    const sumTop = sum("top", type, filtered);
+    const sumTod = sum("tod", type, filtered);
+    const sumBottom3 = sum("bottom3", type, filtered);
+    const sumAll = sumTop + sumTod + sumBottom3;
+
+    // เพิ่มแถวสรุปยอดรวม
+    rows.push({});
+    rows.push({
+      เลข: "✅ รวม",
+      "3 ตัวบน": sumTop,
+      "3 ตัวโต๊ด": sumTod,
+      "3 ตัวล่าง": sumBottom3,
+    });
+    rows.push({
+      เลข: "",
+      "3 ตัวบน": "",
+      "3 ตัวโต๊ด": "",
+      "3 ตัวล่าง": `รวมทั้งหมด: ${sumAll.toLocaleString()} บาท`, // ✅ ไม่มี error
+    });
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -99,6 +122,27 @@ export default function SummaryThreeDigitPage() {
     const data = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(data, `สรุปยอด_${type}.xlsx`);
   };
+
+  // const handleExportExcel = (type: "kept" | "sent") => {
+  //   const rows = filtered.map((item) => ({
+  //     เลข: item.number,
+  //     "3 ตัวบน": item.top?.[type] || 0,
+  //     "3 ตัวโต๊ด": item.tod?.[type] || 0,
+  //     "3 ตัวล่าง": item.bottom3?.[type] || 0,
+  //   }));
+
+  //   const ws = XLSX.utils.json_to_sheet(rows);
+  //   const wb = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(
+  //     wb,
+  //     ws,
+  //     type === "kept" ? "ตัดเก็บ" : "ตัดส่ง"
+  //   );
+
+  //   const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  //   const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+  //   saveAs(data, `สรุปยอด_${type}.xlsx`);
+  // };
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-100 px-4 py-8">

@@ -77,12 +77,53 @@ export default function SummaryTwoDigitPage() {
   const keptEntries = filtered;
   const sentEntries = filtered;
 
-  const handleExportExcel = (type: "kept" | "sent") => {
-    const rows = filtered.map((item) => ({
-      เลข: item.number,
-      "2 ตัวบน": item.top2?.[type] || 0,
-      "2 ตัวล่าง": item.bottom2?.[type] || 0,
+  const combineDuplicateNumbers = (
+    entries: EntryItem[],
+    type: "kept" | "sent"
+  ) => {
+    const combinedMap: Record<string, { top2: number; bottom2: number }> = {};
+
+    entries.forEach((item) => {
+      const number = item.number;
+      const top2 = item.top2?.[type] ? parseFloat(item.top2[type]) : 0;
+      const bottom2 = item.bottom2?.[type] ? parseFloat(item.bottom2[type]) : 0;
+
+      if (!combinedMap[number]) {
+        combinedMap[number] = { top2, bottom2 };
+      } else {
+        combinedMap[number].top2 += top2;
+        combinedMap[number].bottom2 += bottom2;
+      }
+    });
+
+    // แปลงกลับเป็น array เพื่อ export
+    return Object.entries(combinedMap).map(([number, amounts]) => ({
+      เลข: number,
+      "2 ตัวบน": amounts.top2,
+      "2 ตัวล่าง": amounts.bottom2,
     }));
+  };
+
+  const handleExportExcel = (type: "kept" | "sent") => {
+    const rows = combineDuplicateNumbers(filtered, type);
+
+    // คำนวณยอดรวม
+    const sumTop2 = sum("top2", type, filtered);
+    const sumBottom2 = sum("bottom2", type, filtered);
+    const sumAll = sumTop2 + sumBottom2;
+
+    // แถวสรุป
+    rows.push();
+    rows.push({
+      เลข: "รวม",
+      "2 ตัวบน": sumTop2,
+      "2 ตัวล่าง": sumBottom2,
+    });
+    rows.push({
+      เลข: "รวมทั้งหมด",
+      "2 ตัวบน": 0,
+      "2 ตัวล่าง": sumAll,
+    });
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -96,6 +137,66 @@ export default function SummaryTwoDigitPage() {
     const data = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(data, `สรุปยอด_${type}.xlsx`);
   };
+
+  // const handleExportExcel = (type: "kept" | "sent") => {
+  //   const rows: Partial<
+  //     Record<"เลข" | "2 ตัวบน" | "2 ตัวล่าง", string | number>
+  //   >[] = filtered.map((item) => ({
+  //     เลข: item.number,
+  //     "2 ตัวบน": item.top2?.[type] ? parseFloat(item.top2[type]) : 0,
+  //     "2 ตัวล่าง": item.bottom2?.[type] ? parseFloat(item.bottom2[type]) : 0,
+  //   }));
+
+  //   // คำนวณยอดรวม
+  //   const sumTop2 = sum("top2", type, filtered);
+  //   const sumBottom2 = sum("bottom2", type, filtered);
+  //   const sumAll = sumTop2 + sumBottom2;
+
+  //   // เพิ่มแถวสรุปยอดรวม
+  //   rows.push({});
+  //   rows.push({
+  //     เลข: "✅ รวม",
+  //     "2 ตัวบน": sumTop2,
+  //     "2 ตัวล่าง": sumBottom2,
+  //   });
+  //   rows.push({
+  //     เลข: "",
+  //     "2 ตัวบน": "",
+  //     "2 ตัวล่าง": `รวมทั้งหมด: ${sumAll.toLocaleString()} บาท`, // ✅ ไม่มี error
+  //   });
+
+  //   const ws = XLSX.utils.json_to_sheet(rows);
+  //   const wb = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(
+  //     wb,
+  //     ws,
+  //     type === "kept" ? "ตัดเก็บ" : "ตัดส่ง"
+  //   );
+
+  //   const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  //   const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+  //   saveAs(data, `สรุปยอด_${type}.xlsx`);
+  // };
+
+  // const handleExportExcel = (type: "kept" | "sent") => {
+  //   const rows = filtered.map((item) => ({
+  //     เลข: item.number,
+  //     "2 ตัวบน": item.top2?.[type] || 0,
+  //     "2 ตัวล่าง": item.bottom2?.[type] || 0,
+  //   }));
+
+  //   const ws = XLSX.utils.json_to_sheet(rows);
+  //   const wb = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(
+  //     wb,
+  //     ws,
+  //     type === "kept" ? "ตัดเก็บ" : "ตัดส่ง"
+  //   );
+
+  //   const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  //   const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+  //   saveAs(data, `สรุปยอด_${type}.xlsx`);
+  // };
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-100 px-4 py-8">
