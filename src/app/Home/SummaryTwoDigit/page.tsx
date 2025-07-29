@@ -110,7 +110,6 @@ export default function SummaryTwoDigitPage() {
     // คำนวณยอดรวม
     const sumTop2 = sum("top2", type, filtered);
     const sumBottom2 = sum("bottom2", type, filtered);
-    const sumAll = sumTop2 + sumBottom2;
 
     // แถวสรุป
     rows.push();
@@ -118,11 +117,6 @@ export default function SummaryTwoDigitPage() {
       เลข: "รวม",
       "2 ตัวบน": sumTop2,
       "2 ตัวล่าง": sumBottom2,
-    });
-    rows.push({
-      เลข: "รวมทั้งหมด",
-      "2 ตัวบน": 0,
-      "2 ตัวล่าง": sumAll,
     });
 
     const ws = XLSX.utils.json_to_sheet(rows);

@@ -32,6 +32,13 @@ interface EntryItem {
   createdAtThai: string;
 }
 
+type ExportRow = {
+  เลข: string;
+  "3 ตัวบน": number;
+  "3 ตัวโต๊ด": number;
+  "3 ตัวล่าง": number;
+};
+
 export default function SummaryThreeDigitPage() {
   const [entries, setEntries] = useState<EntryItem[]>([]);
   const { showLoading, hideLoading } = useLoading();
@@ -80,36 +87,61 @@ export default function SummaryThreeDigitPage() {
   const sentEntries = filtered;
 
   const handleExportExcel = (type: "kept" | "sent") => {
-    const rows: Partial<
-      Record<"เลข" | "3 ตัวบน" | "3 ตัวโต๊ด" | "3 ตัวล่าง", string | number>
-    >[] = filtered.map((item) => ({
-      เลข: item.number,
-      "3 ตัวบน": item.top?.[type] ? parseFloat(item.top[type]) : 0,
-      "3 ตัวโต๊ด": item.tod?.[type] ? parseFloat(item.tod[type]) : 0,
-      "3 ตัวล่าง": item.bottom3?.[type] ? parseFloat(item.bottom3[type]) : 0,
-    }));
+    // รวมเลขซ้ำ
+    const combinedMap = new Map<
+      string,
+      { top: number; tod: number; bottom3: number }
+    >();
+
+    filtered.forEach((item) => {
+      const key = item.number;
+      const existing = combinedMap.get(key) || {
+        top: 0,
+        tod: 0,
+        bottom3: 0,
+      };
+
+      combinedMap.set(key, {
+        top: existing.top + parseFloat(item.top?.[type] || "0"),
+        tod: existing.tod
+          ? existing.tod + parseFloat(item.tod?.[type] || "0")
+          : existing.tod,
+        bottom3: existing.bottom3 + parseFloat(item.bottom3?.[type] || "0"),
+      });
+    });
+
+    // แปลงเป็น array และเรียงตามเลข
+    const rows: ExportRow[] = Array.from(combinedMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([number, data]) => ({
+        เลข: number,
+        "3 ตัวบน": data.top,
+        "3 ตัวโต๊ด": data.tod,
+        "3 ตัวล่าง": data.bottom3,
+      }));
 
     // คำนวณยอดรวม
-    const sumTop = sum("top", type, filtered);
-    const sumTod = sum("tod", type, filtered);
-    const sumBottom3 = sum("bottom3", type, filtered);
-    const sumAll = sumTop + sumTod + sumBottom3;
+    const totalTop = rows.reduce((acc, row) => acc + row["3 ตัวบน"], 0);
+    const totalTod = rows.reduce((acc, row) => acc + row["3 ตัวโต๊ด"], 0);
+    const totalBottom3 = rows.reduce((acc, row) => acc + row["3 ตัวล่าง"], 0);
 
-    // เพิ่มแถวสรุปยอดรวม
-    rows.push({});
+    // เพิ่มแถวรวม
     rows.push({
       เลข: "✅ รวม",
-      "3 ตัวบน": sumTop,
-      "3 ตัวโต๊ด": sumTod,
-      "3 ตัวล่าง": sumBottom3,
-    });
-    rows.push({
-      เลข: "",
-      "3 ตัวบน": "",
-      "3 ตัวโต๊ด": "",
-      "3 ตัวล่าง": `รวมทั้งหมด: ${sumAll.toLocaleString()} บาท`, // ✅ ไม่มี error
+      "3 ตัวบน": totalTop,
+      "3 ตัวโต๊ด": totalTod,
+      "3 ตัวล่าง": totalBottom3,
     });
 
+    // แทรกแถวเว้นบรรทัด
+    rows.push({
+      เลข: "",
+      "3 ตัวบน": 0,
+      "3 ตัวโต๊ด": 0,
+      "3 ตัวล่าง": 0,
+    });
+
+    // Export เป็น Excel
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(
@@ -120,29 +152,9 @@ export default function SummaryThreeDigitPage() {
 
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+
     saveAs(data, `สรุปยอด_${type}.xlsx`);
   };
-
-  // const handleExportExcel = (type: "kept" | "sent") => {
-  //   const rows = filtered.map((item) => ({
-  //     เลข: item.number,
-  //     "3 ตัวบน": item.top?.[type] || 0,
-  //     "3 ตัวโต๊ด": item.tod?.[type] || 0,
-  //     "3 ตัวล่าง": item.bottom3?.[type] || 0,
-  //   }));
-
-  //   const ws = XLSX.utils.json_to_sheet(rows);
-  //   const wb = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(
-  //     wb,
-  //     ws,
-  //     type === "kept" ? "ตัดเก็บ" : "ตัดส่ง"
-  //   );
-
-  //   const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  //   const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-  //   saveAs(data, `สรุปยอด_${type}.xlsx`);
-  // };
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-100 px-4 py-8">
