@@ -165,14 +165,16 @@ export default function CheckLotteryPage() {
           </div>
         )}
 
-        <div className="flex justify-center">
-          <button
-            onClick={handleCheck}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-6 py-2 rounded shadow"
-          >
-            ตรวจหวย
-          </button>
-        </div>
+        {lotteryResult && (
+          <div className="flex justify-center">
+            <button
+              onClick={handleCheck}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-6 py-2 rounded shadow"
+            >
+              ตรวจหวย
+            </button>
+          </div>
+        )}
 
         {checked && winners.length > 0 && (
           <div className="space-y-6">

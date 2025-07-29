@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock } from "lucide-react";
+// import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiClient } from "@/lib/apiClient";
@@ -40,54 +40,60 @@ export default function LoginPage() {
   };
 
   return (
-    <section className="relative flex min-h-screen items-center justify-center from-indigo-900 via-sky-800 to-emerald-700 px-4 py-10 text-white">
-      {/* decorative lottery balls */}
-    
+    <section className="min-h-screen bg-gradient-to-br from-white via-slate-100 to-emerald-100 flex items-center justify-center px-4 py-10">
+      <div className="max-w-md w-full space-y-6">
+        {/* โลโก้หรือชื่อแอป */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-emerald-600">Lotto App</h1>
+          <p className="text-sm text-gray-500 mt-1">ระบบจัดการหวยครบวงจร</p>
+        </div>
 
-      {/* Glass card */}
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white/10 p-8 backdrop-blur-lg ring-1 ring-white/20 shadow-2xl">
-        <h1 className="mb-6 flex items-center justify-center gap-2 text-2xl font-bold tracking-wide">
-          <Lock className="h-6 w-6" /> เข้าสู่ระบบ Lotto-App
-        </h1>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-emerald-200">
-              อีเมล
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-transparent bg-white/20 py-2 px-4 text-white placeholder-slate-300 outline-none transition focus:border-emerald-400 focus:bg-white/30 focus:ring-2 focus:ring-emerald-400/50"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-emerald-200">
-              รหัสผ่าน
-            </label>
-            <input
-              id="password"
-              type="password"
-              placeholder="********"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-transparent bg-white/20 py-2 px-4 text-white placeholder-slate-300 outline-none transition focus:border-emerald-400 focus:bg-white/30 focus:ring-2 focus:ring-emerald-400/50"
-            />
-          </div>
-
-          {error && <p className="text-sm text-red-300">{error}</p>}
-
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-emerald-500 py-2 font-semibold text-white shadow-lg transition hover:bg-emerald-600 active:scale-95"
-          >
+        {/* Card Login */}
+        <div className="rounded-2xl bg-white shadow-xl ring-1 ring-gray-200 p-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">
             เข้าสู่ระบบ
-          </button>
-        </form>
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                อีเมล
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-800 focus:border-emerald-500 focus:ring-emerald-400 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                รหัสผ่าน
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="********"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-800 focus:border-emerald-500 focus:ring-emerald-400 focus:outline-none"
+              />
+            </div>
+
+            {error && <p className="text-sm text-red-500">{error}</p>}
+
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-emerald-500 py-2 font-semibold text-white hover:bg-emerald-600 transition"
+            >
+              เข้าสู่ระบบ
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-sm text-gray-500">
+          © 2025 Lotto App. All rights reserved.
+        </p>
       </div>
     </section>
   );

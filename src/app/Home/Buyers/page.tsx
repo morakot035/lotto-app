@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, User, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { apiClient } from "@/lib/apiClient";
@@ -20,7 +20,7 @@ export default function BuyersPage() {
   const [phone, setPhone] = useState("");
   const { showLoading, hideLoading } = useLoading();
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -85,96 +85,107 @@ export default function BuyersPage() {
   };
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-indigo-900 via-sky-800/70 to-emerald-700 px-4 py-10 text-white">
-      {/* Back */}
-      <Link
-        href="/Home"
-        className="absolute left-6 top-6 rounded-lg bg-white/10 px-3 py-1 text-sm backdrop-blur-md transition hover:bg-white/20"
-      >
-        ← กลับหน้าเมนู
-      </Link>
-
-      {/* Card */}
-      <div className="w-full max-w-2xl rounded-3xl bg-white/10 p-8 backdrop-blur-md shadow-xl ring-1 ring-white/15">
-        <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold tracking-wide">
-          <User className="h-7 w-7" /> รายชื่อผู้ซื้อ / คนเดินโพยหวย
-        </h1>
-
-        {/* Add Form */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="ชื่อผู้ซื้อ / คนเดินโพย"
-            className="col-span-1 rounded-xl border border-transparent bg-white/20 py-2 px-4 text-white placeholder-slate-300 outline-none transition focus:border-emerald-400 focus:bg-white/30 focus:ring-2 focus:ring-emerald-400/50 sm:col-span-1"
-          />
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="เบอร์โทร (ไม่บังคับ)"
-            className="col-span-1 rounded-xl border border-transparent bg-white/20 py-2 px-4 text-white placeholder-slate-300 outline-none transition focus:border-emerald-400 focus:bg-white/30 focus:ring-2 focus:ring-emerald-400/50 sm:col-span-1"
-          />
-          <button
-            onClick={addBuyer}
-            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2 font-semibold shadow-lg transition hover:bg-emerald-600 active:scale-95 sm:col-span-1"
+    <section className="min-h-screen bg-slate-50 px-4 py-12">
+      <div className="mx-auto max-w-4xl space-y-10">
+        {/* หัวข้อ */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-emerald-600">
+            📋 รายชื่อผู้ซื้อ
+          </h2>
+          <Link
+            href="/Home"
+            className="text-sm text-gray-500 hover:text-emerald-500 transition"
           >
-            <Plus className="h-5 w-5" /> เพิ่มรายชื่อ
-          </button>
+            ← กลับเมนู
+          </Link>
         </div>
 
-        {/* List */}
-        {currentItems.length === 0 ? (
-          <p className="text-center text-slate-300">ยังไม่มีรายชื่อ</p>
-        ) : (
-          <ul className="space-y-3">
-            {Array.isArray(currentItems) &&
-              currentItems.map((b) => (
+        {/* แบบฟอร์มเพิ่มรายชื่อ */}
+        <div className="rounded-2xl bg-white p-6 shadow ring-1 ring-gray-200">
+          <h3 className="text-lg font-medium mb-4 text-gray-700">
+            ➕ เพิ่มรายชื่อใหม่
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="ชื่อผู้ซื้อ"
+              className="col-span-1 rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            />
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="เบอร์โทร (ไม่บังคับ)"
+              className="col-span-1 rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            />
+            <button
+              onClick={addBuyer}
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-white font-semibold shadow hover:bg-emerald-600 active:scale-95"
+            >
+              เพิ่มรายชื่อ
+            </button>
+          </div>
+        </div>
+
+        {/* รายชื่อผู้ซื้อ */}
+        <div className="rounded-2xl bg-white p-6 shadow ring-1 ring-gray-200">
+          <h3 className="text-lg font-medium mb-4 text-gray-700">
+            👥 รายชื่อทั้งหมด
+          </h3>
+          {currentItems.length === 0 ? (
+            <p className="text-gray-400 text-sm">ยังไม่มีรายชื่อผู้ซื้อ</p>
+          ) : (
+            <ul className="space-y-3">
+              {currentItems.map((buyer) => (
                 <li
-                  key={b._id}
-                  className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm"
+                  key={buyer._id}
+                  className="flex items-center justify-between rounded-xl border px-4 py-3 shadow-sm hover:bg-gray-50 transition"
                 >
-                  <span className="font-medium">
-                    {b.name}
-                    {b.phone && (
-                      <span className="ml-2 text-sm text-slate-300">
-                        ({b.phone})
+                  <span className="text-gray-700 font-medium">
+                    {buyer.name}
+                    {buyer.phone && (
+                      <span className="ml-2 text-sm text-gray-400">
+                        ({buyer.phone})
                       </span>
                     )}
                   </span>
                   <button
-                    onClick={() => removeBuyer(b._id)}
-                    className="rounded-md p-1 text-red-300 transition hover:bg-white/20"
+                    onClick={() => removeBuyer(buyer._id)}
+                    className="rounded-md p-1 text-red-500 hover:bg-red-50"
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>
                 </li>
               ))}
-          </ul>
+            </ul>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {buyers.length > itemsPerPage && (
+          <div className="flex justify-center gap-2 pt-4">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg bg-gray-200 px-3 py-1 text-sm text-gray-600 hover:bg-gray-300 disabled:opacity-50"
+            >
+              ย้อนกลับ
+            </button>
+            <span className="px-2 py-1 text-gray-500">
+              หน้า {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className="rounded-lg bg-gray-200 px-3 py-1 text-sm text-gray-600 hover:bg-gray-300 disabled:opacity-50"
+            >
+              ถัดไป
+            </button>
+          </div>
         )}
       </div>
-      {buyers.length > itemsPerPage && (
-        <div className="mt-6 flex justify-center gap-2">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="rounded-md bg-white/20 px-3 py-1 text-sm text-white transition hover:bg-white/30 disabled:opacity-50"
-          >
-            ย้อนกลับ
-          </button>
-          <span className="px-2 py-1 text-white/80">
-            หน้า {currentPage} / {totalPages}
-          </span>
-          <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-            className="rounded-md bg-white/20 px-3 py-1 text-sm text-white transition hover:bg-white/30 disabled:opacity-50"
-          >
-            ถัดไป
-          </button>
-        </div>
-      )}
     </section>
   );
 }

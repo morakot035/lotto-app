@@ -59,15 +59,17 @@ export default function HomePage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-br from-indigo-900 via-sky-800 to-emerald-700 px-4 py-14 text-white">
+    <main className="min-h-screen bg-gray-100 px-4 py-10 text-gray-800">
       {/* Header */}
       <div className="mx-auto mb-12 flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold tracking-wide">Lotto Application</h1>
+        <h1 className="text-3xl font-bold tracking-wide">
+          📋 เมนูจัดการระบบหวย
+        </h1>
         <LogoutButton />
       </div>
 
       {/* Menu */}
-      <section className="mx-auto grid max-w-7xl gap-6 px-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+      <section className="mx-auto grid max-w-7xl gap-6 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
         {menu.map(({ title, href, icon: Icon }) => {
           const isDeleteMenu = title === "ล้างข้อมูลทวย";
           return (
@@ -75,17 +77,19 @@ export default function HomePage() {
               key={title}
               onClick={() => {
                 if (isDeleteMenu) {
-                  setOpenConfirm(true); // เปิด Modal
+                  setOpenConfirm(true);
                 } else {
                   window.location.href = href;
                 }
               }}
-              className="group relative flex aspect-[5/3] flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 text-center shadow-xl ring-1 ring-white/10 backdrop-blur-md transition hover:scale-105 hover:border-white/30 hover:bg-white/15"
+              className="group rounded-xl bg-white p-6 text-center shadow-md ring-1 ring-gray-200 transition-all hover:-translate-y-1 hover:shadow-xl"
             >
-              <Icon className="mb-4 h-12 w-12 text-white/80 transition duration-200 group-hover:text-white" />
-              <span className="text-lg font-semibold tracking-tight text-white/90 group-hover:text-white">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mx-auto group-hover:bg-emerald-500 group-hover:text-white transition">
+                <Icon className="h-8 w-8" />
+              </div>
+              <p className="text-base font-semibold text-gray-800 group-hover:text-emerald-600">
                 {title}
-              </span>
+              </p>
             </button>
           );
         })}
