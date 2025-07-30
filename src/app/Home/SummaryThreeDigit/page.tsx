@@ -197,14 +197,6 @@ export default function SummaryThreeDigitPage() {
       "3 ตัวล่าง": totalBottom3,
     });
 
-    // เพิ่มบรรทัดเว้นท้าย
-    rows.push({
-      เลข: "",
-      "3 ตัวบน": 0,
-      "3 ตัวโต๊ด": 0,
-      "3 ตัวล่าง": 0,
-    });
-
     // Export Excel
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
