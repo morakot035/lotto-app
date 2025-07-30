@@ -83,8 +83,9 @@ export default function SummaryThreeDigitPage() {
   };
 
   const filtered = entries.filter((e) => e.top || e.tod || e.bottom3);
-  const keptEntries = filtered;
-  const sentEntries = filtered;
+
+  const keptEntries = filtered.filter((e) => e.source === "self");
+  const sentEntries = filtered.filter((e) => e.source === "dealer");
 
   const handleExportExcel = (type: "kept" | "sent") => {
     // รวมเลขซ้ำ
@@ -103,9 +104,7 @@ export default function SummaryThreeDigitPage() {
 
       combinedMap.set(key, {
         top: existing.top + parseFloat(item.top?.[type] || "0"),
-        tod: existing.tod
-          ? existing.tod + parseFloat(item.tod?.[type] || "0")
-          : existing.tod,
+        tod: existing.tod + parseFloat(item.tod?.[type] || "0"),
         bottom3: existing.bottom3 + parseFloat(item.bottom3?.[type] || "0"),
       });
     });

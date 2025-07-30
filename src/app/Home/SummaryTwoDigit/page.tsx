@@ -35,7 +35,32 @@ export default function SummaryTwoDigitPage() {
   const [entries, setEntries] = useState<EntryItem[]>([]);
   const { showLoading, hideLoading } = useLoading();
 
+  const [cutConfig, setCutConfig] = useState<{
+    threeDigitTop: string;
+    threeDigitTod: string;
+    threeDigitBottom: string;
+    twoDigitTop: string;
+    twoDigitBottom: string;
+  } | null>(null);
+
   useEffect(() => {
+    const fetchConfig = async () => {
+      const token = getToken();
+      if (!token) return;
+      try {
+        const res = await apiClient.getCutConfig(token);
+        setCutConfig({
+          threeDigitTop: res.data.threeDigitTop,
+          threeDigitTod: res.data.threeDigitTod,
+          threeDigitBottom: res.data.threeDigitBottom,
+          twoDigitTop: res.data.twoDigitTop,
+          twoDigitBottom: res.data.twoDigitBottom,
+        });
+      } catch (err) {
+        console.error("โหลด cut config ล้มเหลว", err);
+      }
+    };
+
     const fetchEntries = async () => {
       const token = getToken();
       if (!token) return;
@@ -49,6 +74,8 @@ export default function SummaryTwoDigitPage() {
         hideLoading();
       }
     };
+
+    fetchConfig();
     fetchEntries();
   }, []);
 
@@ -74,47 +101,93 @@ export default function SummaryTwoDigitPage() {
   };
 
   const filtered = entries.filter((e) => e.top2 || e.bottom2);
-  const keptEntries = filtered;
-  const sentEntries = filtered;
 
-  const combineDuplicateNumbers = (
-    entries: EntryItem[],
-    type: "kept" | "sent"
-  ) => {
-    const combinedMap: Record<string, { top2: number; bottom2: number }> = {};
+  const keptEntries = filtered.filter((e) => e.source === "self");
+  const sentEntries = filtered.filter((e) => e.source === "dealer");
 
-    entries.forEach((item) => {
+  const getCappedKeptEntries = () => {
+    if (!cutConfig) return [];
+
+    const limitTop = parseFloat(cutConfig.twoDigitTop);
+    const limitBottom = parseFloat(cutConfig.twoDigitBottom);
+
+    const combinedMap = new Map<string, { top: number; bottom: number }>();
+
+    keptEntries.forEach((item) => {
       const number = item.number;
-      const top2 = item.top2?.[type] ? parseFloat(item.top2[type]) : 0;
-      const bottom2 = item.bottom2?.[type] ? parseFloat(item.bottom2[type]) : 0;
+      const prev = combinedMap.get(number) || { top: 0, bottom: 0 };
 
-      if (!combinedMap[number]) {
-        combinedMap[number] = { top2, bottom2 };
-      } else {
-        combinedMap[number].top2 += top2;
-        combinedMap[number].bottom2 += bottom2;
-      }
+      const topAdd = Math.min(
+        limitTop - prev.top,
+        parseFloat(item.top2?.kept || "0")
+      );
+      const bottomAdd = Math.min(
+        limitBottom - prev.bottom,
+        parseFloat(item.bottom2?.kept || "0")
+      );
+
+      combinedMap.set(number, {
+        top: prev.top + Math.max(0, topAdd),
+        bottom: prev.bottom + Math.max(0, bottomAdd),
+      });
     });
 
-    // แปลงกลับเป็น array เพื่อ export
-    return Object.entries(combinedMap).map(([number, amounts]) => ({
-      เลข: number,
-      "2 ตัวบน": amounts.top2,
-      "2 ตัวล่าง": amounts.bottom2,
+    return Array.from(combinedMap.entries()).map(([number, val]) => ({
+      number,
+      top2: val.top,
+      bottom2: val.bottom,
+    }));
+  };
+
+  const getCappedSentEntries = () => {
+    if (!cutConfig) return [];
+
+    // const limitTop = parseFloat(cutConfig.twoDigitTop);
+    // const limitBottom = parseFloat(cutConfig.twoDigitBottom);
+
+    const combinedMap = new Map<string, { top: number; bottom: number }>();
+
+    sentEntries.forEach((item) => {
+      const number = item.number;
+      const prev = combinedMap.get(number) || { top: 0, bottom: 0 };
+
+      const topAdd = parseFloat(item.top2?.sent || "0");
+      const bottomAdd = parseFloat(item.bottom2?.sent || "0");
+
+      combinedMap.set(number, {
+        top: prev.top + Math.max(0, topAdd),
+        bottom: prev.bottom + Math.max(0, bottomAdd),
+      });
+    });
+
+    return Array.from(combinedMap.entries()).map(([number, val]) => ({
+      number,
+      top2: val.top,
+      bottom2: val.bottom,
     }));
   };
 
   const handleExportExcel = (type: "kept" | "sent") => {
-    const rows = combineDuplicateNumbers(filtered, type);
+    let cappedData: { number: string; top2: number; bottom2: number }[] = [];
 
-    // คำนวณยอดรวม
-    const sumTop2 = sum("top2", type, filtered);
-    const sumBottom2 = sum("bottom2", type, filtered);
+    if (type === "kept") {
+      cappedData = getCappedKeptEntries();
+    } else {
+      cappedData = getCappedSentEntries();
+    }
 
-    // แถวสรุป
+    const rows = cappedData.map((item) => ({
+      เลข: item.number,
+      "2 ตัวบน": item.top2,
+      "2 ตัวล่าง": item.bottom2,
+    }));
+
+    const sumTop2 = cappedData.reduce((acc, cur) => acc + cur.top2, 0);
+    const sumBottom2 = cappedData.reduce((acc, cur) => acc + cur.bottom2, 0);
+
     rows.push();
     rows.push({
-      เลข: "รวม",
+      เลข: "✅ รวม",
       "2 ตัวบน": sumTop2,
       "2 ตัวล่าง": sumBottom2,
     });
@@ -131,66 +204,6 @@ export default function SummaryTwoDigitPage() {
     const data = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(data, `สรุปยอด_${type}.xlsx`);
   };
-
-  // const handleExportExcel = (type: "kept" | "sent") => {
-  //   const rows: Partial<
-  //     Record<"เลข" | "2 ตัวบน" | "2 ตัวล่าง", string | number>
-  //   >[] = filtered.map((item) => ({
-  //     เลข: item.number,
-  //     "2 ตัวบน": item.top2?.[type] ? parseFloat(item.top2[type]) : 0,
-  //     "2 ตัวล่าง": item.bottom2?.[type] ? parseFloat(item.bottom2[type]) : 0,
-  //   }));
-
-  //   // คำนวณยอดรวม
-  //   const sumTop2 = sum("top2", type, filtered);
-  //   const sumBottom2 = sum("bottom2", type, filtered);
-  //   const sumAll = sumTop2 + sumBottom2;
-
-  //   // เพิ่มแถวสรุปยอดรวม
-  //   rows.push({});
-  //   rows.push({
-  //     เลข: "✅ รวม",
-  //     "2 ตัวบน": sumTop2,
-  //     "2 ตัวล่าง": sumBottom2,
-  //   });
-  //   rows.push({
-  //     เลข: "",
-  //     "2 ตัวบน": "",
-  //     "2 ตัวล่าง": `รวมทั้งหมด: ${sumAll.toLocaleString()} บาท`, // ✅ ไม่มี error
-  //   });
-
-  //   const ws = XLSX.utils.json_to_sheet(rows);
-  //   const wb = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(
-  //     wb,
-  //     ws,
-  //     type === "kept" ? "ตัดเก็บ" : "ตัดส่ง"
-  //   );
-
-  //   const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  //   const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-  //   saveAs(data, `สรุปยอด_${type}.xlsx`);
-  // };
-
-  // const handleExportExcel = (type: "kept" | "sent") => {
-  //   const rows = filtered.map((item) => ({
-  //     เลข: item.number,
-  //     "2 ตัวบน": item.top2?.[type] || 0,
-  //     "2 ตัวล่าง": item.bottom2?.[type] || 0,
-  //   }));
-
-  //   const ws = XLSX.utils.json_to_sheet(rows);
-  //   const wb = XLSX.utils.book_new();
-  //   XLSX.utils.book_append_sheet(
-  //     wb,
-  //     ws,
-  //     type === "kept" ? "ตัดเก็บ" : "ตัดส่ง"
-  //   );
-
-  //   const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  //   const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-  //   saveAs(data, `สรุปยอด_${type}.xlsx`);
-  // };
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-100 px-4 py-8">
@@ -220,18 +233,14 @@ export default function SummaryTwoDigitPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {keptEntries.map((item) => (
-                <TableRow key={item._id}>
+              {getCappedKeptEntries().map((item) => (
+                <TableRow key={item.number}>
                   <TableCell align="center">{item.number}</TableCell>
                   <TableCell align="center">
-                    {item.top2?.kept
-                      ? parseFloat(item.top2.kept).toLocaleString()
-                      : "-"}
+                    {item.top2 ? item.top2.toLocaleString() : "-"}
                   </TableCell>
                   <TableCell align="center">
-                    {item.bottom2?.kept
-                      ? parseFloat(item.bottom2.kept).toLocaleString()
-                      : "-"}
+                    {item.bottom2 ? item.bottom2.toLocaleString() : "-"}
                   </TableCell>
                 </TableRow>
               ))}
@@ -248,13 +257,19 @@ export default function SummaryTwoDigitPage() {
                   align="center"
                   className="text-emerald-900 font-semibold"
                 >
-                  {sum("top2", "kept", keptEntries).toLocaleString()} บาท
+                  {getCappedKeptEntries()
+                    .reduce((acc, cur) => acc + cur.top2, 0)
+                    .toLocaleString()}{" "}
+                  บาท
                 </TableCell>
                 <TableCell
                   align="center"
                   className="text-emerald-900 font-semibold"
                 >
-                  {sum("bottom2", "kept", keptEntries).toLocaleString()} บาท
+                  {getCappedKeptEntries()
+                    .reduce((acc, cur) => acc + cur.bottom2, 0)
+                    .toLocaleString()}{" "}
+                  บาท
                 </TableCell>
               </TableRow>
               <TableRow className="bg-emerald-200 border-t border-emerald-300">
@@ -264,7 +279,10 @@ export default function SummaryTwoDigitPage() {
                   className="text-emerald-900 font-bold text-lg py-3"
                 >
                   ✅ รวมตัดเก็บทั้งหมด:{" "}
-                  {sumTotal("kept", keptEntries).toLocaleString()} บาท
+                  {getCappedKeptEntries()
+                    .reduce((acc, cur) => acc + cur.top2 + cur.bottom2, 0)
+                    .toLocaleString()}{" "}
+                  บาท
                 </TableCell>
               </TableRow>
             </TableFooter>
@@ -293,18 +311,14 @@ export default function SummaryTwoDigitPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {sentEntries.map((item) => (
-                <TableRow key={item._id}>
+              {getCappedSentEntries().map((item) => (
+                <TableRow key={item.number}>
                   <TableCell align="center">{item.number}</TableCell>
                   <TableCell align="center">
-                    {item.top2?.sent
-                      ? parseFloat(item.top2.sent).toLocaleString()
-                      : "-"}
+                    {item.top2 ? item.top2.toLocaleString() : "-"}
                   </TableCell>
                   <TableCell align="center">
-                    {item.bottom2?.sent
-                      ? parseFloat(item.bottom2.sent).toLocaleString()
-                      : "-"}
+                    {item.bottom2 ? item.bottom2.toLocaleString() : "-"}
                   </TableCell>
                 </TableRow>
               ))}

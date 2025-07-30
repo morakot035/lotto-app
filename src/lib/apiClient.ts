@@ -166,7 +166,7 @@ export const apiClient = {
   getEntriesByBuyer: (buyerName: string, token: string) =>
   apiRequest<{ data: EntryItem[] }>(`/api/entry/by-buyer/${buyerName}`, "GET", undefined, token),
 
-  deleteEntries: (token: string) => apiRequest(`/api/entry/delete`, "DELETE",undefined, token),
+  deleteEntries: (token: string) => apiRequest(`/api/entry/delete`, "POST",undefined, token),
    getWinners: (token: string) => apiRequest<WinnerResponse>("/api/lottery/check-winners", "GET", undefined, token),
 
    getAll: (token: string) => apiRequest<{ data: EntryItem[] }>("/api/entry/all", "GET", undefined, token)

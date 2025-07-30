@@ -13,6 +13,7 @@ import {
 import LogoutButton from "@/components/LogoutButton";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useState } from "react";
+import { useLoading } from "@/context/LoadingContext";
 import {
   Dialog,
   DialogActions,
@@ -41,12 +42,14 @@ export default function HomePage() {
 
   const [openConfirm, setOpenConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { showLoading, hideLoading } = useLoading();
 
   const handleDeleteAllEntries = async () => {
     const token = getToken();
     if (!token) return;
     setDeleting(true);
     try {
+      showLoading();
       await apiClient.deleteEntries(token);
       toast.success("ลบข้อมูลทั้งหมดสำเร็จ");
       setOpenConfirm(false);
@@ -54,6 +57,7 @@ export default function HomePage() {
       console.error(err);
       toast.error("ลบข้อมูลไม่สำเร็จ");
     } finally {
+      hideLoading();
       setDeleting(false);
     }
   };
