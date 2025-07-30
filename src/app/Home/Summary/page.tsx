@@ -224,55 +224,66 @@ export default function SummaryPage() {
   };
 
   return (
-    <section className="min-h-screen bg-gradient-to-br from-blue-100 to-blue-200 px-6 py-10">
-      <Link
-        href="/Home"
-        className="absolute left-6 top-6 rounded-lg bg-white/10 px-3 py-1 text-sm backdrop-blur-md transition hover:bg-white/20"
-      >
-        ← กลับหน้าเมนู
-      </Link>
-      <h1 className="text-center text-2xl font-bold text-blue-800 mb-6">
-        สรุปยอดซื้อ
-      </h1>
-
-      <div className="max-w-xl mx-auto mb-8">
-        <Autocomplete
-          options={buyers}
-          getOptionLabel={(option) => option.name}
-          value={selectedBuyer}
-          onChange={(event, newValue) => handleBuyerChange(newValue)}
-          renderInput={(params) => (
-            <TextField {...params} label="ค้นหาผู้ซื้อ" variant="outlined" />
-          )}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
-        <div className="bg-white/100 p-6 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold text-blue-700 mb-2">ฝั่งเรา</h2>
-          {renderTable("self")}
-          <p className="mt-4 font-bold text-green-700">
-            รวมยอด: {calculateTotal("self").toLocaleString()} บาท
-          </p>
+    <section className="min-h-screen bg-gray-100 px-4 py-10 text-gray-800">
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-blue-800">📊 สรุปยอดซื้อ</h1>
+          <Link
+            href="/Home"
+            className="rounded-lg bg-blue-100 px-3 py-1 text-sm text-blue-800 shadow hover:bg-blue-200 transition"
+          >
+            ← กลับหน้าเมนู
+          </Link>
         </div>
 
-        <div className="bg-white/100 p-6 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold text-rose-700 mb-2">
-            ฝั่งเจ้ามือ
-          </h2>
-          {selectedBuyer && (
-            <button
-              onClick={handleExportDealerExcel}
-              className="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-            >
-              📤 Export Excel
-            </button>
-          )}
+        <div className="bg-white p-6 rounded-xl shadow ring-1 ring-gray-200">
+          <Autocomplete
+            options={buyers}
+            getOptionLabel={(option) => option.name}
+            value={selectedBuyer}
+            onChange={(event, newValue) => handleBuyerChange(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="🔍 ค้นหาผู้ซื้อ"
+                variant="outlined"
+              />
+            )}
+          />
+        </div>
 
-          {renderTable("dealer")}
-          <p className="mt-4 font-bold text-rose-700">
-            รวมยอด: {calculateTotal("dealer").toLocaleString()} บาท
-          </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* ฝั่งเรา */}
+          <div className="bg-white p-6 rounded-xl shadow ring-1 ring-gray-200">
+            <h2 className="text-lg font-semibold text-emerald-700 mb-4">
+              🧾 ฝั่งเรา (เก็บเอง)
+            </h2>
+            {renderTable("self")}
+            <p className="mt-4 font-bold text-emerald-600">
+              ✅ รวมยอด: {calculateTotal("self").toLocaleString()} บาท
+            </p>
+          </div>
+
+          {/* ฝั่งเจ้ามือ */}
+          <div className="bg-white p-6 rounded-xl shadow ring-1 ring-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-rose-700">
+                📨 ฝั่งเจ้ามือ (ตัดส่ง)
+              </h2>
+              {selectedBuyer && (
+                <button
+                  onClick={handleExportDealerExcel}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition text-sm shadow"
+                >
+                  📤 Export Excel
+                </button>
+              )}
+            </div>
+            {renderTable("dealer")}
+            <p className="mt-4 font-bold text-rose-600">
+              ✅ รวมยอด: {calculateTotal("dealer").toLocaleString()} บาท
+            </p>
+          </div>
         </div>
       </div>
     </section>

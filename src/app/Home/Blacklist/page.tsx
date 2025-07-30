@@ -90,7 +90,7 @@ export default function BlacklistPage() {
   };
 
   return (
-    <section className="min-h-screen bg-gray-100 px-4 py-12 text-gray-800">
+    <section className="min-h-screen bg-gradient-to-br from-rose-50 to-emerald-100 px-4 py-12 text-gray-800">
       {/* Back Button */}
       <Link
         href="/Home"
@@ -101,8 +101,8 @@ export default function BlacklistPage() {
 
       <div className="mx-auto max-w-4xl space-y-10">
         {/* Card ตั้งค่าเลขไม่รับซื้อ */}
-        <div className="bg-white p-6 rounded-xl shadow ring-1 ring-gray-200">
-          <h2 className="text-xl font-semibold mb-6 text-center">
+        <div className="rounded-2xl bg-white/80 p-6 shadow-xl ring-1 ring-white/40 backdrop-blur-sm">
+          <h2 className="text-2xl font-bold text-rose-700 mb-6 text-center">
             🚫 ตั้งค่าเลขไม่รับซื้อ
           </h2>
 
@@ -111,13 +111,13 @@ export default function BlacklistPage() {
             <input
               value={number}
               onChange={(e) => setNumber(e.target.value)}
-              placeholder="เลขที่ไม่รับซื้อ"
+              placeholder="ระบุเลขที่ไม่รับซื้อ"
               type="number"
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 outline-none transition focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 bg-white text-gray-800 outline-none focus:ring-2 focus:ring-rose-400 shadow-sm"
             />
             <button
               onClick={addOrUpdateNumber}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg px-6 py-2 transition active:scale-95"
+              className="bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-lg px-6 py-2 transition active:scale-95 shadow"
             >
               <Plus className="inline-block w-4 h-4 mr-1" />
               {editingId ? "บันทึก" : "เพิ่มเลข"}
@@ -126,15 +126,19 @@ export default function BlacklistPage() {
 
           {/* รายการเลขที่แบน */}
           {blacklist.length === 0 ? (
-            <p className="text-center text-gray-400">ยังไม่มีเลขที่ถูกแบน</p>
+            <div className="text-center text-gray-400 italic">
+              ยังไม่มีเลขที่ถูกแบน
+            </div>
           ) : (
             <ul className="space-y-3">
               {blacklist.map((item) => (
                 <li
                   key={item._id}
-                  className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border"
+                  className="flex items-center justify-between bg-white p-3 rounded-xl border shadow-sm hover:shadow-md transition"
                 >
-                  <span className="font-medium text-lg">{item.number}</span>
+                  <span className="font-medium text-lg text-rose-700">
+                    {item.number}
+                  </span>
                   <div className="flex gap-2">
                     <button
                       onClick={() => startEditing(item)}
