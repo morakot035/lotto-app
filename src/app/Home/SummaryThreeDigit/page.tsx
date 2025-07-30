@@ -43,7 +43,32 @@ export default function SummaryThreeDigitPage() {
   const [entries, setEntries] = useState<EntryItem[]>([]);
   const { showLoading, hideLoading } = useLoading();
 
+  const [cutConfig, setCutConfig] = useState<{
+    threeDigitTop: string;
+    threeDigitTod: string;
+    threeDigitBottom: string;
+    twoDigitTop: string;
+    twoDigitBottom: string;
+  } | null>(null);
+
   useEffect(() => {
+    const fetchConfig = async () => {
+      const token = getToken();
+      if (!token) return;
+      try {
+        const res = await apiClient.getCutConfig(token);
+        setCutConfig({
+          threeDigitTop: res.data.threeDigitTop,
+          threeDigitTod: res.data.threeDigitTod,
+          threeDigitBottom: res.data.threeDigitBottom,
+          twoDigitTop: res.data.twoDigitTop,
+          twoDigitBottom: res.data.twoDigitBottom,
+        });
+      } catch (err) {
+        console.error("โหลด cut config ล้มเหลว", err);
+      }
+    };
+
     const fetchEntries = async () => {
       const token = getToken();
       if (!token) return;
@@ -57,6 +82,7 @@ export default function SummaryThreeDigitPage() {
         hideLoading();
       }
     };
+    fetchConfig();
     fetchEntries();
   }, []);
 
@@ -87,42 +113,81 @@ export default function SummaryThreeDigitPage() {
   const keptEntries = filtered.filter((e) => e.source === "self");
   const sentEntries = filtered.filter((e) => e.source === "dealer");
 
-  const handleExportExcel = (type: "kept" | "sent") => {
-    // รวมเลขซ้ำ
+  const getCappedEntries = (entries: EntryItem[], type: "kept" | "sent") => {
+    if (type === "kept" && !cutConfig) return [];
+
+    const limitTop = parseFloat(cutConfig?.threeDigitTop || "0");
+    const limitTod = parseFloat(cutConfig?.threeDigitTod || "0");
+    const limitBottom = parseFloat(cutConfig?.threeDigitBottom || "0");
+
     const combinedMap = new Map<
       string,
       { top: number; tod: number; bottom3: number }
     >();
 
-    filtered.forEach((item) => {
-      const key = item.number;
-      const existing = combinedMap.get(key) || {
+    entries.forEach((item) => {
+      const number = item.number;
+      const prev = combinedMap.get(number) || {
         top: 0,
         tod: 0,
         bottom3: 0,
       };
 
-      combinedMap.set(key, {
-        top: existing.top + parseFloat(item.top?.[type] || "0"),
-        tod: existing.tod + parseFloat(item.tod?.[type] || "0"),
-        bottom3: existing.bottom3 + parseFloat(item.bottom3?.[type] || "0"),
+      const rawTop = parseFloat(item.top?.[type] || "0");
+      const rawTod = parseFloat(item.tod?.[type] || "0");
+      const rawBottom = parseFloat(item.bottom3?.[type] || "0");
+
+      const topAdd =
+        type === "kept" ? Math.min(limitTop - prev.top, rawTop) : rawTop;
+      const todAdd =
+        type === "kept" ? Math.min(limitTod - prev.tod, rawTod) : rawTod;
+      const bottomAdd =
+        type === "kept"
+          ? Math.min(limitBottom - prev.bottom3, rawBottom)
+          : rawBottom;
+
+      combinedMap.set(number, {
+        top: prev.top + Math.max(0, topAdd),
+        tod: prev.tod + Math.max(0, todAdd),
+        bottom3: prev.bottom3 + Math.max(0, bottomAdd),
       });
     });
 
-    // แปลงเป็น array และเรียงตามเลข
-    const rows: ExportRow[] = Array.from(combinedMap.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([number, data]) => ({
-        เลข: number,
-        "3 ตัวบน": data.top,
-        "3 ตัวโต๊ด": data.tod,
-        "3 ตัวล่าง": data.bottom3,
+    return Array.from(combinedMap.entries()).map(([number, val]) => ({
+      number,
+      top: val.top,
+      tod: val.tod,
+      bottom3: val.bottom3,
+    }));
+  };
+
+  const handleExportExcel = (type: "kept" | "sent") => {
+    // ใช้ข้อมูลจาก UI ที่ผ่านการ limit แล้ว
+    const sourceEntries =
+      type === "kept"
+        ? getCappedEntries(keptEntries, "kept")
+        : getCappedEntries(sentEntries, "sent");
+
+    // สร้างแถวสำหรับ export
+    const rows: ExportRow[] = sourceEntries
+      .sort((a, b) => a.number.localeCompare(b.number))
+      .map((item) => ({
+        เลข: item.number,
+        "3 ตัวบน": item.top,
+        "3 ตัวโต๊ด": item.tod,
+        "3 ตัวล่าง": item.bottom3,
       }));
 
-    // คำนวณยอดรวม
-    const totalTop = rows.reduce((acc, row) => acc + row["3 ตัวบน"], 0);
-    const totalTod = rows.reduce((acc, row) => acc + row["3 ตัวโต๊ด"], 0);
-    const totalBottom3 = rows.reduce((acc, row) => acc + row["3 ตัวล่าง"], 0);
+    // คำนวณรวม
+    const totalTop = rows.reduce((acc, row) => acc + (row["3 ตัวบน"] || 0), 0);
+    const totalTod = rows.reduce(
+      (acc, row) => acc + (row["3 ตัวโต๊ด"] || 0),
+      0
+    );
+    const totalBottom3 = rows.reduce(
+      (acc, row) => acc + (row["3 ตัวล่าง"] || 0),
+      0
+    );
 
     // เพิ่มแถวรวม
     rows.push({
@@ -132,7 +197,7 @@ export default function SummaryThreeDigitPage() {
       "3 ตัวล่าง": totalBottom3,
     });
 
-    // แทรกแถวเว้นบรรทัด
+    // เพิ่มบรรทัดเว้นท้าย
     rows.push({
       เลข: "",
       "3 ตัวบน": 0,
@@ -140,7 +205,7 @@ export default function SummaryThreeDigitPage() {
       "3 ตัวล่าง": 0,
     });
 
-    // Export เป็น Excel
+    // Export Excel
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(
@@ -154,6 +219,8 @@ export default function SummaryThreeDigitPage() {
 
     saveAs(data, `สรุปยอด_${type}.xlsx`);
   };
+
+  const cappedKeptEntries = getCappedEntries(keptEntries, "kept");
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-100 px-4 py-8">
@@ -184,23 +251,17 @@ export default function SummaryThreeDigitPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {keptEntries.map((item) => (
-                <TableRow key={item._id}>
+              {getCappedEntries(keptEntries, "kept").map((item) => (
+                <TableRow key={item.number}>
                   <TableCell align="center">{item.number}</TableCell>
                   <TableCell align="center">
-                    {item.top?.kept
-                      ? parseFloat(item.top.kept).toLocaleString()
-                      : "-"}
+                    {item.top.toLocaleString()}
                   </TableCell>
                   <TableCell align="center">
-                    {item.tod?.kept
-                      ? parseFloat(item.tod.kept).toLocaleString()
-                      : "-"}
+                    {item.tod.toLocaleString()}
                   </TableCell>
                   <TableCell align="center">
-                    {item.bottom3?.kept
-                      ? parseFloat(item.bottom3.kept).toLocaleString()
-                      : "-"}
+                    {item.bottom3.toLocaleString()}
                   </TableCell>
                 </TableRow>
               ))}
@@ -217,19 +278,28 @@ export default function SummaryThreeDigitPage() {
                   align="center"
                   className="text-emerald-900 font-semibold"
                 >
-                  {sum("top", "kept", keptEntries).toLocaleString()} บาท
+                  {cappedKeptEntries
+                    .reduce((acc, item) => acc + (item.top || 0), 0)
+                    .toLocaleString()}{" "}
+                  บาท
                 </TableCell>
                 <TableCell
                   align="center"
                   className="text-emerald-900 font-semibold"
                 >
-                  {sum("tod", "kept", keptEntries).toLocaleString()} บาท
+                  {cappedKeptEntries
+                    .reduce((acc, item) => acc + (item.tod || 0), 0)
+                    .toLocaleString()}{" "}
+                  บาท
                 </TableCell>
                 <TableCell
                   align="center"
                   className="text-emerald-900 font-semibold"
                 >
-                  {sum("bottom3", "kept", keptEntries).toLocaleString()} บาท
+                  {cappedKeptEntries
+                    .reduce((acc, item) => acc + (item.bottom3 || 0), 0)
+                    .toLocaleString()}{" "}
+                  บาท
                 </TableCell>
               </TableRow>
               <TableRow className="bg-emerald-200 border-t border-emerald-300">
@@ -239,7 +309,21 @@ export default function SummaryThreeDigitPage() {
                   className="text-emerald-900 font-bold text-lg py-3"
                 >
                   ✅ รวมตัดเก็บ:{" "}
-                  {sumTotal("kept", keptEntries).toLocaleString()} บาท
+                  {(
+                    cappedKeptEntries.reduce(
+                      (acc, item) => acc + (item.top || 0),
+                      0
+                    ) +
+                    cappedKeptEntries.reduce(
+                      (acc, item) => acc + (item.tod || 0),
+                      0
+                    ) +
+                    cappedKeptEntries.reduce(
+                      (acc, item) => acc + (item.bottom3 || 0),
+                      0
+                    )
+                  ).toLocaleString()}{" "}
+                  บาท
                 </TableCell>
               </TableRow>
             </TableFooter>
@@ -269,23 +353,17 @@ export default function SummaryThreeDigitPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {sentEntries.map((item) => (
-                <TableRow key={item._id}>
+              {getCappedEntries(sentEntries, "sent").map((item) => (
+                <TableRow key={item.number}>
                   <TableCell align="center">{item.number}</TableCell>
                   <TableCell align="center">
-                    {item.top?.kept
-                      ? parseFloat(item.top.sent).toLocaleString()
-                      : "-"}
+                    {item.top.toLocaleString()}
                   </TableCell>
                   <TableCell align="center">
-                    {item.tod?.kept
-                      ? parseFloat(item.tod.sent).toLocaleString()
-                      : "-"}
+                    {item.tod.toLocaleString()}
                   </TableCell>
                   <TableCell align="center">
-                    {item.bottom3?.kept
-                      ? parseFloat(item.bottom3.sent).toLocaleString()
-                      : "-"}
+                    {item.bottom3.toLocaleString()}
                   </TableCell>
                 </TableRow>
               ))}
