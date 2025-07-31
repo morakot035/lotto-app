@@ -41,7 +41,7 @@ export default function EntryPage() {
   const todRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLInputElement>(null);
   const saveButtonRef = useRef<HTMLButtonElement>(null);
-  const [blacklistNumbers, setBlacklistNumbers] = useState<string[]>([]);
+
   const [alertMessage, setAlertMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -66,8 +66,7 @@ export default function EntryPage() {
     const fetchBlacklist = async () => {
       const token = getToken();
       if (!token) return;
-      const res = await apiClient.getBlacklist(token);
-      setBlacklistNumbers(res.data.map((item) => item.number.trim()));
+      await apiClient.getBlacklist(token);
     };
     fetchBlacklist();
   }, []);
