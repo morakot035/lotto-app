@@ -74,12 +74,7 @@ export default function EntryPage() {
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    if (blacklistNumbers.includes(inputValue.trim())) {
-      setAlertMessage(`เลข ${inputValue} เป็นเลขที่ไม่รับซื้อ`);
-      setEntry({ ...entry, number: "" }); // reset
-    } else {
-      setEntry({ ...entry, number: inputValue });
-    }
+    setEntry({ ...entry, number: inputValue });
   };
 
   const handleInputKeyDown = (

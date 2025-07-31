@@ -169,5 +169,11 @@ export const apiClient = {
   deleteEntries: (token: string) => apiRequest(`/api/entry/delete`, "POST",undefined, token),
    getWinners: (token: string) => apiRequest<WinnerResponse>("/api/lottery/check-winners", "GET", undefined, token),
 
-   getAll: (token: string) => apiRequest<{ data: EntryItem[] }>("/api/entry/all", "GET", undefined, token)
+   getAll: (token: string) => apiRequest<{ data: EntryItem[] }>("/api/entry/all", "GET", undefined, token),
+
+   deleteEntryPair: (buyerName: string, number: string, token: string) =>
+    apiRequest(`/api/entry/deletePair`, "POST", {buyerName, number}, token),
+
+   saveLotteryDealer: (entries: LotteryEntry[], token: string) =>
+  apiRequest("/api/entry/lottery/dealer", "POST", entries, token),
 };

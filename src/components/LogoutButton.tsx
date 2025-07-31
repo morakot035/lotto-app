@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function LogoutButton() {
         router.replace("/Login");
       }}
     >
-      ออกจากระบบ
+      <LogOut className="w-5 h-5" />
     </button>
   );
 }

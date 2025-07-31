@@ -6,8 +6,9 @@ import { Autocomplete, TextField } from "@mui/material";
 import { apiClient } from "@/lib/apiClient";
 import { getToken } from "@/lib/auth";
 import { useLoading } from "@/context/LoadingContext";
-import { formatThaiDateTime } from "@/utility/convertDate";
+import { Trash } from "lucide-react";
 import Link from "next/link";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface Buyers {
   _id: number;
@@ -50,6 +51,8 @@ export default function SummaryPage() {
   const [selectedBuyer, setSelectedBuyer] = useState<Buyers | null>(null);
   const [entries, setEntries] = useState<EntryItem[]>([]);
   const { showLoading, hideLoading } = useLoading();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedNumber, setSelectedNumber] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBuyers = async () => {
@@ -125,6 +128,35 @@ export default function SummaryPage() {
       }, 0);
   };
 
+  const handleDeleteClick = (number: string) => {
+    setSelectedNumber(number);
+    setModalOpen(true);
+  };
+
+  const handleDeletePair = async () => {
+    if (!selectedBuyer || !selectedNumber) return;
+
+    setModalOpen(true);
+    try {
+      showLoading();
+      const token = getToken();
+      if (!token) return;
+      await apiClient.deleteEntryPair(
+        selectedBuyer.name,
+        selectedNumber,
+        token
+      );
+      await fetchSummary(selectedBuyer.name); // รีโหลดใหม่
+    } catch (err) {
+      console.error("ลบไม่สำเร็จ", err);
+      alert("เกิดข้อผิดพลาดในการลบ");
+    } finally {
+      hideLoading();
+      setSelectedNumber(null);
+      setModalOpen(false);
+    }
+  };
+
   const renderTable = (source: "self" | "dealer") => {
     const filtered = entries.filter((item) => item.source === source);
     if (filtered.length === 0)
@@ -139,7 +171,7 @@ export default function SummaryPage() {
               <th className="px-3 py-2 border">บน</th>
               <th className="px-3 py-2 border">โต๊ด</th>
               <th className="px-3 py-2 border">ล่าง</th>
-              <th className="px-3 py-2 border">เวลา</th>
+              <th className="px-3 py-2 border"></th>
             </tr>
           </thead>
           <tbody>
@@ -162,7 +194,14 @@ export default function SummaryPage() {
                     {getAmount(item.bottom3 || item.bottom2)}
                   </td>
                   <td className="px-3 py-2 border text-center">
-                    {formatThaiDateTime(item.createdAt)}
+                    {source === "self" && (
+                      <button
+                        onClick={() => handleDeleteClick(item.number)}
+                        className="text-red-600 hover:underline text-sm"
+                      >
+                        <Trash size={18} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
@@ -170,14 +209,14 @@ export default function SummaryPage() {
           </tbody>
           <tfoot>
             <tr className="bg-blue-50 font-bold text-blue-800">
-              <td className="px-3 py-2 border text-right">รวม</td>
-              <td className="px-3 py-2 border text-right">
+              <td className="px-3 py-2 border text-center">รวม</td>
+              <td className="px-3 py-2 border text-center">
                 {sumColumn(source, "top").toLocaleString()}
               </td>
-              <td className="px-3 py-2 border text-right">
+              <td className="px-3 py-2 border text-center">
                 {sumColumn(source, "tod").toLocaleString()}
               </td>
-              <td className="px-3 py-2 border text-right">
+              <td className="px-3 py-2 border text-center">
                 {sumColumn(source, "bottom").toLocaleString()}
               </td>
               <td className="px-3 py-2 border"></td>
@@ -286,6 +325,13 @@ export default function SummaryPage() {
           </div>
         </div>
       </div>
+      <ConfirmModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleDeletePair}
+        title="ยืนยันการลบ"
+        message={`คุณแน่ใจหรือไม่ว่าต้องการลบเลข ${selectedNumber} ทั้งฝั่งเก็บและส่ง?`}
+      />
     </section>
   );
 }
