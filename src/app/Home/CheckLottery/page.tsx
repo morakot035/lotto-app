@@ -60,7 +60,7 @@ export default function CheckLotteryPage() {
     useState<LotteryResultResponse | null>(null);
   const [lotteryDate, setLotteryDate] = useState<string>("");
   const { showLoading, hideLoading } = useLoading();
-  const [warning, setWarning] = useState(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResult = async () => {
