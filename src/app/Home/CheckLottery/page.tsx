@@ -60,6 +60,7 @@ export default function CheckLotteryPage() {
     useState<LotteryResultResponse | null>(null);
   const [lotteryDate, setLotteryDate] = useState<string>("");
   const { showLoading, hideLoading } = useLoading();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -67,6 +68,7 @@ export default function CheckLotteryPage() {
         showLoading();
         const res = await apiClient.getLotteryResult();
         setLotteryResult(res);
+        setError(null); // ✅ เคลียร์ error ถ้าสำเร็จ
 
         const { date, month, year } = res.date;
         const yearThai = (parseInt(year) + 543).toString();
@@ -76,6 +78,7 @@ export default function CheckLotteryPage() {
         setLotteryDate(formatted);
       } catch (err) {
         console.error("ดึงผลหวยไม่สำเร็จ", err);
+        setError("เกิดข้อผิดพลาดในการดึงข้อมูลหวยจากเซิร์ฟเวอร์");
       } finally {
         hideLoading();
       }
@@ -92,9 +95,10 @@ export default function CheckLotteryPage() {
       const res = await apiClient.getWinners(token);
       setWinners(res.winners);
       setChecked(true);
+      setError(null);
     } catch (err) {
       console.error("เกิดข้อผิดพลาด", err);
-      alert("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+      setError("เกิดข้อผิดพลาดในการโหลดข้อมูลผลผู้ถูกรางวัล");
     } finally {
       hideLoading();
     }
@@ -246,6 +250,23 @@ export default function CheckLotteryPage() {
           </div>
         )}
       </div>
+      {error && (
+        <div className="flex justify-center">
+          <div className="bg-white p-8 rounded-xl shadow ring-1 ring-red-300 text-center max-w-lg space-y-4 border border-red-300 mt-6">
+            <div className="text-6xl text-red-400">🚨</div>
+            <h2 className="text-2xl font-semibold text-red-600">
+              เกิดข้อผิดพลาด
+            </h2>
+            <p className="text-red-500">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              ปิดข้อความ
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
