@@ -17,8 +17,11 @@ async function apiRequest<T = unknown>(
 
   const data = await res.json();
 
-  if (!res.ok) {
-    throw new Error(data?.error.message || "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+   if (!res.ok || data?.success === false) {
+    // รองรับได้ทั้งกรณี message และ error.message
+    const message =
+      data?.message || data?.error?.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์";
+    throw new Error(message);
   }
 
   return data;

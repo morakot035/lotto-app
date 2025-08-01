@@ -247,13 +247,13 @@ export default function SummaryThreeDigitPage() {
                 <TableRow key={item.number}>
                   <TableCell align="center">{item.number}</TableCell>
                   <TableCell align="center">
-                    {item.top.toLocaleString()}
+                    {item.top ? item.top.toLocaleString() : "-"}
                   </TableCell>
                   <TableCell align="center">
-                    {item.tod.toLocaleString()}
+                    {item.tod ? item.tod.toLocaleString() : "-"}
                   </TableCell>
                   <TableCell align="center">
-                    {item.bottom3.toLocaleString()}
+                    {item.bottom3 ? item.bottom3.toLocaleString() : "-"}
                   </TableCell>
                 </TableRow>
               ))}
@@ -349,13 +349,13 @@ export default function SummaryThreeDigitPage() {
                 <TableRow key={item.number}>
                   <TableCell align="center">{item.number}</TableCell>
                   <TableCell align="center">
-                    {item.top.toLocaleString()}
+                    {item.top ? item.top.toLocaleString() : "-"}
                   </TableCell>
                   <TableCell align="center">
-                    {item.tod.toLocaleString()}
+                    {item.tod ? item.tod.toLocaleString() : "-"}
                   </TableCell>
                   <TableCell align="center">
-                    {item.bottom3.toLocaleString()}
+                    {item.bottom3 ? item.bottom3.toLocaleString() : "-"}
                   </TableCell>
                 </TableRow>
               ))}
