@@ -179,4 +179,7 @@ export const apiClient = {
 
    saveLotteryDealer: (entries: LotteryEntry[], token: string) =>
   apiRequest("/api/entry/lottery/dealer", "POST", entries, token),
+
+   checkWinnerByNumber: (number: string, token: string) =>
+  apiRequest<WinnerResponse>("/api/lottery/check-winners", "POST", { number }, token),
 };

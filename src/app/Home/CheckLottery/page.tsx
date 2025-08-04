@@ -61,6 +61,7 @@ export default function CheckLotteryPage() {
   const [lotteryDate, setLotteryDate] = useState<string>("");
   const { showLoading, hideLoading } = useLoading();
   const [warning, setWarning] = useState<string | null>(null);
+  const [searchNumber, setSearchNumber] = useState(""); // เก็บเลขที่กรอก
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -91,17 +92,24 @@ export default function CheckLotteryPage() {
     fetchResult();
   }, []);
 
-  const handleCheck = async () => {
+  const handleSearch = async () => {
     const token = getToken();
-    if (!token) return;
+    if (!token || !searchNumber.trim()) return;
+
     try {
       showLoading();
-      const res = await apiClient.getWinners(token);
+      const res = await apiClient.checkWinnerByNumber(
+        searchNumber.trim(),
+        token
+      );
       setWinners(res.winners);
       setChecked(true);
       setWarning(null);
     } catch (err) {
       console.error("เกิดข้อผิดพลาด", err);
+      setWinners([]);
+      setChecked(true);
+      setWarning("ไม่พบข้อมูลเลขนี้ หรือเกิดข้อผิดพลาด");
     } finally {
       hideLoading();
     }
@@ -173,12 +181,21 @@ export default function CheckLotteryPage() {
         )}
 
         {lotteryResult && (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <input
+              type="text"
+              maxLength={6}
+              placeholder="กรอกเลขที่ต้องการตรวจ"
+              value={searchNumber}
+              onChange={(e) => setSearchNumber(e.target.value)}
+              className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
             <button
-              onClick={handleCheck}
+              onClick={handleSearch}
               className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-6 py-2 rounded shadow"
+              disabled={!searchNumber.trim()}
             >
-              ตรวจหวย
+              🔍 ค้นหาเลขนี้
             </button>
           </div>
         )}
