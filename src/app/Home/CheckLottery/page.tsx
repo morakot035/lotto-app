@@ -65,9 +65,11 @@ export default function CheckLotteryPage() {
 
   useEffect(() => {
     const fetchResult = async () => {
+      const token = getToken();
+      if (!token) return;
       try {
         showLoading();
-        const res = await apiClient.getLotteryResult();
+        const res = await apiClient.getLotteryResult(token);
         setLotteryResult(res);
         setWarning(null); // ✅ เคลียร์ error ถ้าสำเร็จ
 

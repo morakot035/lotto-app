@@ -154,8 +154,8 @@ export const apiClient = {
   deleteBlacklist: (id: string, token: string) =>
     apiRequest(`/api/blocknumber/${id}`, "DELETE", undefined, token),
 
-  getLotteryResult: () =>
-    apiRequest<LotteryResultResponse>("/api/lottery/result", "POST"),
+  getLotteryResult: (token: string) =>
+    apiRequest<LotteryResultResponse>("/api/lottery/result", "POST", token),
 
   saveLottery: (entries: LotteryEntry[], token: string) =>
     apiRequest<SaveLotteryResponse[]>("/api/entry/result", "POST", entries, token),
