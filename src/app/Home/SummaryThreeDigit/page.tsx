@@ -170,7 +170,9 @@ export default function SummaryThreeDigitPage() {
     const limitBottom = parseFloat(cutConfig.threeDigitBottom || "0");
 
     // ใช้เฉพาะ self เป็นฐาน
-    const selfEntries = allEntries.filter((e) => e.source === "self");
+    const selfEntries = allEntries.filter(
+      (e) => e.source === "self" && (e.top || e.tod || e.bottom3)
+    );
 
     const combinedMap = new Map<
       string,
